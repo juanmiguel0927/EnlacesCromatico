@@ -38,10 +38,10 @@
         #piano-container {
             position: relative;
             white-space: nowrap;
-            height: 120px;
+            height: 80px;
             display: flex;
             justify-content: center;
-            padding: 10px;
+            padding: 8px;
             background: #1e293b;
             border-radius: 12px;
             box-shadow: inset 0 4px 6px rgba(0,0,0,0.3);
@@ -114,81 +114,81 @@
                         <option value="11">Fa# / Solb</option>
                     </select>
 
-                    <div class="flex flex-col gap-3">
-                        <label class="flex items-center cursor-pointer group bg-slate-50 dark:bg-slate-700/50 p-3 sm:p-4 rounded-lg border border-slate-200 dark:border-slate-600 hover:border-blue-400 transition-colors">
-                            <div class="relative">
+                    <div class="grid grid-cols-1 xl:grid-cols-2 gap-3">
+                        <label class="flex items-center cursor-pointer group bg-slate-50 dark:bg-slate-700/50 p-2 sm:p-3 rounded-lg border border-slate-200 dark:border-slate-600 hover:border-blue-400 transition-colors">
+                            <div class="relative shrink-0">
                                 <input type="checkbox" id="checkCiclo" onchange="actualizarSimulador()" class="sr-only">
                                 <div class="block bg-slate-300 dark:bg-slate-600 w-11 h-6 rounded-full transition-colors duration-300 ease-in-out group-hover:bg-slate-400" id="toggleBg"></div>
                                 <div class="dot absolute left-1 top-1 bg-white w-4 h-4 rounded-full transition-transform duration-300 ease-in-out" id="toggleDot"></div>
                             </div>
-                            <div class="ml-3 text-sm font-semibold text-slate-700 dark:text-slate-200 transition-colors">Completar octava (Ciclo continuo)</div>
+                            <div class="ml-2 text-xs font-semibold text-slate-700 dark:text-slate-200 transition-colors leading-tight">Ciclo continuo</div>
                         </label>
                         
-                        <label class="flex items-center cursor-pointer group bg-slate-50 dark:bg-slate-700/50 p-3 sm:p-4 rounded-lg border border-slate-200 dark:border-slate-600 hover:border-purple-400 transition-colors">
-                            <div class="relative">
+                        <label class="flex items-center cursor-pointer group bg-slate-50 dark:bg-slate-700/50 p-2 sm:p-3 rounded-lg border border-slate-200 dark:border-slate-600 hover:border-purple-400 transition-colors">
+                            <div class="relative shrink-0">
                                 <input type="checkbox" id="checkRomano" onchange="actualizarSimulador()" class="sr-only">
                                 <div class="block bg-slate-300 dark:bg-slate-600 w-11 h-6 rounded-full transition-colors duration-300 ease-in-out group-hover:bg-slate-400" id="toggleRomanoBg"></div>
                                 <div class="dot absolute left-1 top-1 bg-white w-4 h-4 rounded-full transition-transform duration-300 ease-in-out" id="toggleRomanoDot"></div>
                             </div>
-                            <div class="ml-3 text-sm font-semibold text-slate-700 dark:text-slate-200 transition-colors">Cifrado Funcional (Romano)</div>
+                            <div class="ml-2 text-xs font-semibold text-slate-700 dark:text-slate-200 transition-colors leading-tight">Cifrado Romano</div>
                         </label>
 
-                        <label class="flex items-center cursor-pointer group bg-slate-50 dark:bg-slate-700/50 p-3 sm:p-4 rounded-lg border border-slate-200 dark:border-slate-600 hover:border-orange-400 transition-colors">
-                            <div class="relative">
+                        <label class="flex items-center cursor-pointer group bg-slate-50 dark:bg-slate-700/50 p-2 sm:p-3 rounded-lg border border-slate-200 dark:border-slate-600 hover:border-orange-400 transition-colors">
+                            <div class="relative shrink-0">
                                 <input type="checkbox" id="checkArpegio" class="sr-only" onchange="toggleArpegioVisual()">
                                 <div class="block bg-slate-300 dark:bg-slate-600 w-11 h-6 rounded-full transition-colors duration-300 ease-in-out group-hover:bg-slate-400" id="toggleArpegioBg"></div>
                                 <div class="dot absolute left-1 top-1 bg-white w-4 h-4 rounded-full transition-transform duration-300 ease-in-out" id="toggleArpegioDot"></div>
                             </div>
-                            <div class="ml-3 text-sm font-semibold text-slate-700 dark:text-slate-200 transition-colors">Modo Arpegiado (Strumming)</div>
+                            <div class="ml-2 text-xs font-semibold text-slate-700 dark:text-slate-200 transition-colors leading-tight">Arpegiado</div>
                         </label>
 
-                        <label class="flex items-center cursor-pointer group bg-slate-50 dark:bg-slate-700/50 p-3 sm:p-4 rounded-lg border border-slate-200 dark:border-slate-600 hover:border-indigo-400 transition-colors">
-                            <div class="relative">
+                        <label class="flex items-center cursor-pointer group bg-slate-50 dark:bg-slate-700/50 p-2 sm:p-3 rounded-lg border border-slate-200 dark:border-slate-600 hover:border-indigo-400 transition-colors">
+                            <div class="relative shrink-0">
                                 <input type="checkbox" id="checkDark" onchange="toggleDarkMode()" class="sr-only">
                                 <div class="block bg-slate-300 dark:bg-slate-600 w-11 h-6 rounded-full transition-colors duration-300 ease-in-out group-hover:bg-slate-400" id="toggleDarkBg"></div>
                                 <div class="dot absolute left-1 top-1 bg-white w-4 h-4 rounded-full transition-transform duration-300 ease-in-out" id="toggleDarkDot"></div>
                             </div>
-                            <div class="ml-3 text-sm font-semibold text-slate-700 dark:text-slate-200 transition-colors">Modo Oscuro</div>
+                            <div class="ml-2 text-xs font-semibold text-slate-700 dark:text-slate-200 transition-colors leading-tight">Modo Oscuro</div>
                         </label>
                     </div>
 
-                    <div class="mt-6 border-t border-slate-200 dark:border-slate-700 pt-5 transition-colors">
-                        <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-3 mb-3">
+                    <div class="mt-4 border-t border-slate-200 dark:border-slate-700 pt-4 transition-colors">
+                        <div class="flex flex-col xl:flex-row xl:items-center justify-between gap-3 mb-3">
                             <span class="text-sm font-semibold text-slate-800 dark:text-slate-200 transition-colors">Velocidad</span>
-                            <div class="flex items-center gap-2 flex-grow sm:flex-grow-0">
+                            <div class="flex items-center gap-2 flex-grow xl:flex-grow-0">
                                 <span class="text-xs text-slate-500 dark:text-slate-400 font-medium">BPM:</span>
-                                <input type="range" id="tempoSlider" min="40" max="140" value="70" class="w-full sm:w-24 h-2 bg-slate-200 dark:bg-slate-600 rounded-lg appearance-none cursor-pointer">
+                                <input type="range" id="tempoSlider" min="40" max="140" value="70" class="w-full xl:w-24 h-2 bg-slate-200 dark:bg-slate-600 rounded-lg appearance-none cursor-pointer">
                                 <span id="tempoValue" class="text-xs text-slate-600 dark:text-slate-300 font-bold w-6 text-right">70</span>
                             </div>
                         </div>
                         
-                        <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-3 mb-4">
+                        <div class="flex flex-col xl:flex-row xl:items-center justify-between gap-3 mb-4">
                             <span class="text-sm font-semibold text-slate-800 dark:text-slate-200 transition-colors">Volumen</span>
-                            <div class="flex items-center gap-2 flex-grow sm:flex-grow-0">
+                            <div class="flex items-center gap-2 flex-grow xl:flex-grow-0">
                                 <span class="text-xs text-slate-500 dark:text-slate-400 font-medium text-center w-6">Vol:</span>
-                                <input type="range" id="volumeSlider" min="-30" max="5" value="-6" class="w-full sm:w-24 h-2 bg-slate-200 dark:bg-slate-600 rounded-lg appearance-none cursor-pointer">
+                                <input type="range" id="volumeSlider" min="-30" max="5" value="-6" class="w-full xl:w-24 h-2 bg-slate-200 dark:bg-slate-600 rounded-lg appearance-none cursor-pointer">
                                 <span id="volumeValue" class="text-xs text-slate-600 dark:text-slate-300 font-bold w-12 text-right">-6 dB</span>
                             </div>
                         </div>
 
-                        <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-3 mb-5 border-t border-slate-100 dark:border-slate-700 pt-3 transition-colors">
-                            <span class="text-sm font-semibold text-slate-800 dark:text-slate-200">Timbre (Suave)</span>
-                            <select id="opcionTimbre" onchange="cambiarTimbre()" class="w-full sm:w-auto bg-slate-50 dark:bg-slate-700 dark:text-white border border-slate-300 dark:border-slate-600 hover:border-blue-400 text-slate-700 text-xs rounded focus:ring-blue-500 focus:border-blue-500 block p-1.5 outline-none cursor-pointer transition-colors shadow-sm">
+                        <div class="flex flex-col mb-4 border-t border-slate-100 dark:border-slate-700 pt-3 transition-colors">
+                            <span class="text-sm font-semibold text-slate-800 dark:text-slate-200 mb-2">Timbre (Sintetizador)</span>
+                            <select id="opcionTimbre" onchange="cambiarTimbre()" class="w-full bg-slate-50 dark:bg-slate-700 dark:text-white border border-slate-300 dark:border-slate-600 hover:border-blue-400 text-slate-700 text-xs rounded focus:ring-blue-500 focus:border-blue-500 block p-2 outline-none cursor-pointer transition-colors shadow-sm">
                                 <option value="rhodes" selected>Piano Eléctrico Suave</option>
-                                <option value="pad">Pad Analógico Cálido</option>
-                                <option value="flute">Viento Madera Dulce</option>
+                                <option value="pad">Cuerdas Sintéticas (Pad)</option>
                                 <option value="sine">Vibráfono de Cristal</option>
+                                <option value="organ">Órgano de Iglesia</option>
                             </select>
                         </div>
 
                         <div class="flex flex-col gap-2">
-                            <button id="btnPlay" onclick="togglePlay()" class="w-full bg-blue-600 hover:bg-blue-700 text-white font-semibold py-3 px-4 rounded-lg shadow-sm transition-all flex items-center justify-center gap-2 text-sm sm:text-base">
-                                <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="currentColor"><path d="M8 5v14l11-7z"/></svg>
+                            <button id="btnPlay" onclick="togglePlay()" class="w-full bg-blue-600 hover:bg-blue-700 text-white font-semibold py-2.5 px-4 rounded-lg shadow-sm transition-all flex items-center justify-center gap-2 text-sm">
+                                <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="currentColor"><path d="M8 5v14l11-7z"/></svg>
                                 <span>Escuchar Progresión</span>
                             </button>
                             
                             <button id="btnMidi" onclick="exportarMIDI()" class="w-full bg-green-600 hover:bg-green-700 text-white font-semibold py-2 px-4 rounded-lg shadow-sm transition-all flex items-center justify-center gap-2 text-sm">
-                                <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path><polyline points="7 10 12 15 17 10"></polyline><line x1="12" y1="15" x2="12" y2="3"></line></svg>
+                                <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path><polyline points="7 10 12 15 17 10"></polyline><line x1="12" y1="15" x2="12" y2="3"></line></svg>
                                 <span>Descargar MIDI</span>
                             </button>
                         </div>
@@ -203,29 +203,29 @@
 
             <!-- PANEL DERECHO: Flex líquido (min-w-0 evita que Plotly desborde el contenedor en iFrames) -->
             <div class="w-full flex-1 min-w-0 flex flex-col gap-4">
-                <div class="bg-white dark:bg-slate-800 rounded-xl shadow-lg border border-slate-200 dark:border-slate-700 p-2 sm:p-4 flex flex-col relative overflow-hidden flex-grow min-h-[450px] lg:min-h-[600px] h-full transition-colors duration-300">
-                    <div id="chart" class="w-full flex-grow h-full min-h-[350px]"></div>
+                <div class="bg-white dark:bg-slate-800 rounded-xl shadow-lg border border-slate-200 dark:border-slate-700 p-2 flex flex-col relative overflow-hidden flex-grow min-h-[350px] h-full transition-colors duration-300">
+                    <div id="chart" class="w-full flex-grow h-full min-h-[250px]"></div>
                     
-                    <div class="mt-4 flex flex-wrap justify-center gap-3 sm:gap-8 border-t border-slate-100 dark:border-slate-700 pt-4 pb-2 px-2 z-10 bg-white dark:bg-slate-800 transition-colors">
-                        <div id="leg-0" class="legend-item flex items-center gap-2 cursor-pointer hover:bg-slate-50 dark:hover:bg-slate-700 p-2 rounded-lg" onclick="toggleVoice(0)">
-                            <div class="w-10 h-1 bg-[#ea580c] relative flex justify-center rounded-full"><div class="w-3 h-3 bg-[#ea580c] rounded-full absolute -top-1 border-2 border-white dark:border-slate-800 transition-colors"></div></div>
-                            <span class="text-sm font-bold text-slate-700 dark:text-slate-200 select-none">Soprano</span>
+                    <div class="mt-2 flex flex-wrap justify-center gap-2 sm:gap-6 border-t border-slate-100 dark:border-slate-700 pt-2 pb-1 px-2 z-10 bg-white dark:bg-slate-800 transition-colors">
+                        <div id="leg-0" class="legend-item flex items-center gap-2 cursor-pointer hover:bg-slate-50 dark:hover:bg-slate-700 p-1.5 rounded-lg" onclick="toggleVoice(0)">
+                            <div class="w-8 h-1 bg-[#ea580c] relative flex justify-center rounded-full"><div class="w-2.5 h-2.5 bg-[#ea580c] rounded-full absolute -top-1 border-2 border-white dark:border-slate-800 transition-colors"></div></div>
+                            <span class="text-xs font-bold text-slate-700 dark:text-slate-200 select-none">Soprano</span>
                         </div>
-                        <div id="leg-1" class="legend-item flex items-center gap-2 cursor-pointer hover:bg-slate-50 dark:hover:bg-slate-700 p-2 rounded-lg" onclick="toggleVoice(1)">
-                            <div class="w-10 h-0.5 border-t-2 border-dashed border-[#a855f7] relative flex justify-center"><div class="w-2.5 h-2.5 bg-[#a855f7] rounded-full absolute -top-1.5"></div></div>
-                            <span class="text-sm font-bold text-slate-700 dark:text-slate-200 select-none">Contralto</span>
+                        <div id="leg-1" class="legend-item flex items-center gap-2 cursor-pointer hover:bg-slate-50 dark:hover:bg-slate-700 p-1.5 rounded-lg" onclick="toggleVoice(1)">
+                            <div class="w-8 h-0.5 border-t-2 border-dashed border-[#a855f7] relative flex justify-center"><div class="w-2 h-2 bg-[#a855f7] rounded-full absolute -top-1"></div></div>
+                            <span class="text-xs font-bold text-slate-700 dark:text-slate-200 select-none">Contralto</span>
                         </div>
-                        <div id="leg-2" class="legend-item flex items-center gap-2 cursor-pointer hover:bg-slate-50 dark:hover:bg-slate-700 p-2 rounded-lg" onclick="toggleVoice(2)">
-                            <div class="w-10 h-0.5 border-t-2 border-dashed border-[#10b981] relative flex justify-center"><div class="w-2.5 h-2.5 bg-[#10b981] rounded-full absolute -top-1.5"></div></div>
-                            <span class="text-sm font-bold text-slate-700 dark:text-slate-200 select-none">Tenor</span>
+                        <div id="leg-2" class="legend-item flex items-center gap-2 cursor-pointer hover:bg-slate-50 dark:hover:bg-slate-700 p-1.5 rounded-lg" onclick="toggleVoice(2)">
+                            <div class="w-8 h-0.5 border-t-2 border-dashed border-[#10b981] relative flex justify-center"><div class="w-2 h-2 bg-[#10b981] rounded-full absolute -top-1"></div></div>
+                            <span class="text-xs font-bold text-slate-700 dark:text-slate-200 select-none">Tenor</span>
                         </div>
-                        <div id="leg-3" class="legend-item flex items-center gap-2 cursor-pointer hover:bg-slate-50 dark:hover:bg-slate-700 p-2 rounded-lg" onclick="toggleVoice(3)">
-                            <div class="w-10 h-1 bg-[#3b82f6] relative flex justify-center rounded-full"><div class="w-3 h-3 bg-[#3b82f6] rounded-full absolute -top-1 border-2 border-white dark:border-slate-800 transition-colors"></div></div>
-                            <span class="text-sm font-bold text-slate-700 dark:text-slate-200 select-none">Bajo</span>
+                        <div id="leg-3" class="legend-item flex items-center gap-2 cursor-pointer hover:bg-slate-50 dark:hover:bg-slate-700 p-1.5 rounded-lg" onclick="toggleVoice(3)">
+                            <div class="w-8 h-1 bg-[#3b82f6] relative flex justify-center rounded-full"><div class="w-2.5 h-2.5 bg-[#3b82f6] rounded-full absolute -top-1 border-2 border-white dark:border-slate-800 transition-colors"></div></div>
+                            <span class="text-xs font-bold text-slate-700 dark:text-slate-200 select-none">Bajo</span>
                         </div>
                     </div>
                     
-                    <div class="absolute top-3 right-3 z-20 flex gap-2">
+                    <div class="absolute top-2 right-2 z-20 flex gap-2">
                         <button onclick="exportarGrafico()" class="bg-white/90 dark:bg-slate-700/90 backdrop-blur hover:bg-slate-50 dark:hover:bg-slate-600 text-slate-600 dark:text-slate-200 hover:text-blue-600 dark:hover:text-blue-400 p-2 rounded-lg shadow-sm border border-slate-200 dark:border-slate-600 transition-all text-xs flex items-center gap-1.5" title="Exportar como Imagen PNG">
                             <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="18" height="18" rx="2" ry="2"></rect><circle cx="8.5" cy="8.5" r="1.5"></circle><polyline points="21 15 16 10 5 21"></polyline></svg>
                         </button>
