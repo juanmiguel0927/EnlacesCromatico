@@ -1,506 +1,663 @@
 <!DOCTYPE html>
-<html lang="es">
+<html lang="es" class="">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
     <title>Geometría de la Progresión Ómnibus</title>
-    <!-- Carga de librerías: Tailwind, Plotly y Tone.js (para sonido) -->
+    
     <script src="https://cdn.tailwindcss.com"></script>
+    <script>
+        tailwind.config = { darkMode: 'class' }
+    </script>
     <script src="https://cdn.plot.ly/plotly-2.27.0.min.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/tone/14.8.49/Tone.js"></script>
+    
+    <!-- SOLUCIÓN AL ERROR DE EXPORTACIÓN: Cargamos la librería MIDI como un módulo nativo ES6 -->
+    <script type="module">
+        import { Track, Writer, NoteEvent } from 'https://cdn.jsdelivr.net/npm/midi-writer-js@2.1.4/+esm';
+        window.MidiWriter = { Track, Writer, NoteEvent };
+    </script>
+
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+    
     <style>
         body { font-family: 'Inter', sans-serif; -webkit-tap-highlight-color: transparent; }
         #descripcionTeorica { transition: opacity 0.3s ease-in-out; }
         .legend-item { transition: all 0.2s ease; }
         .legend-disabled { opacity: 0.3; filter: grayscale(100%); }
         
-        /* Animación para el botón play */
         @keyframes pulse-play {
             0% { transform: scale(1); box-shadow: 0 0 0 0 rgba(37, 99, 235, 0.4); }
             70% { transform: scale(1.02); box-shadow: 0 0 0 12px rgba(37, 99, 235, 0); }
             100% { transform: scale(1); box-shadow: 0 0 0 0 rgba(37, 99, 235, 0); }
         }
         .playing-btn { animation: pulse-play 1s infinite; background-color: #ef4444 !important; }
-        
-        /* Ocultar barra de scroll en contenedores específicos si es necesario en móvil */
         .hide-scrollbar::-webkit-scrollbar { display: none; }
         .hide-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }
+
+        #piano-container {
+            position: relative;
+            white-space: nowrap;
+            height: 120px;
+            display: flex;
+            justify-content: center;
+            padding: 10px;
+            background: #1e293b;
+            border-radius: 12px;
+            box-shadow: inset 0 4px 6px rgba(0,0,0,0.3);
+            overflow-x: auto;
+        }
+        .white-key {
+            display: inline-block;
+            width: 32px;
+            height: 100%;
+            background-color: white;
+            border: 1px solid #cbd5e1;
+            border-radius: 0 0 4px 4px;
+            margin: 0 1px;
+            position: relative;
+            z-index: 1;
+            box-shadow: 0 2px 2px rgba(0,0,0,0.2);
+            transition: background-color 0.1s;
+        }
+        .black-key {
+            position: absolute;
+            width: 20px;
+            height: 60%;
+            background-color: #0f172a;
+            border-radius: 0 0 3px 3px;
+            z-index: 2;
+            margin-left: -11px;
+            box-shadow: 1px 2px 2px rgba(0,0,0,0.4);
+            transition: background-color 0.1s;
+        }
+        
+        .key-active-v0 { background-color: #ea580c !important; } 
+        .key-active-v1 { background-color: #a855f7 !important; } 
+        .key-active-v2 { background-color: #10b981 !important; } 
+        .key-active-v3 { background-color: #3b82f6 !important; } 
     </style>
 </head>
-<body class="bg-slate-50 min-h-screen p-3 sm:p-6 flex flex-col items-center overflow-x-hidden">
+<body class="bg-slate-50 dark:bg-slate-900 min-h-screen p-3 sm:p-6 flex flex-col items-center overflow-x-hidden transition-colors duration-300">
 
     <main class="max-w-7xl w-full flex flex-col items-center">
-        <h1 class="text-2xl sm:text-3xl md:text-4xl font-bold text-slate-800 mb-3 text-center tracking-tight">Conducción Cromática y Secuencia Ómnibus</h1>
-        <p class="text-slate-600 text-center max-w-3xl mb-6 sm:mb-8 leading-relaxed text-xs sm:text-sm md:text-base px-2">
-            Simulador interactivo. Observa cómo las voces extremas proceden en direcciones opuestas mientras las voces internas actúan como ejes o pedales, formando acordes de sexta aumentada alemana.
+        <h1 class="text-2xl sm:text-3xl md:text-4xl font-bold text-slate-800 dark:text-slate-100 mb-3 text-center tracking-tight transition-colors">Conducción Cromática y Secuencia Ómnibus</h1>
+        <p class="text-slate-600 dark:text-slate-400 text-center max-w-3xl mb-6 sm:mb-8 leading-relaxed text-xs sm:text-sm md:text-base px-2 transition-colors">
+            Simulador interactivo basado en los modelos teóricos de movimiento cromático contrario. Observa cómo las voces extremas proceden en direcciones opuestas mientras las voces internas actúan como ejes o pedales, formando acordes de sexta aumentada alemana.
         </p>
 
         <div class="w-full flex flex-col lg:flex-row gap-4 lg:gap-6 mb-8">
-            
-            <!-- Panel Izquierdo: Controles -->
             <div class="w-full lg:w-1/3 flex flex-col gap-4">
-                <div class="bg-white p-4 sm:p-5 rounded-xl shadow-sm border border-slate-200">
+                <div class="bg-white dark:bg-slate-800 p-4 sm:p-5 rounded-xl shadow-sm border border-slate-200 dark:border-slate-700 transition-colors">
                     
-                    <label for="opcionVoicing" class="block font-semibold text-slate-800 mb-2 text-sm">Modelo armónico:</label>
-                    <select id="opcionVoicing" aria-label="Seleccionar modelo armónico" onchange="actualizarSimulador()" 
-                        class="w-full mb-4 bg-slate-50 border border-slate-300 hover:border-blue-400 text-slate-800 text-sm rounded-lg focus:ring-blue-600 focus:border-blue-600 block p-3 outline-none transition-colors cursor-pointer font-medium shadow-sm">
+                    <label for="opcionVoicing" class="block font-semibold text-slate-800 dark:text-slate-200 mb-2 text-sm transition-colors">Selecciona el modelo armónico:</label>
+                    <select id="opcionVoicing" onchange="actualizarSimulador()" class="w-full mb-4 bg-slate-50 dark:bg-slate-700 dark:text-white border border-slate-300 dark:border-slate-600 hover:border-blue-400 dark:hover:border-blue-500 text-slate-800 text-sm rounded-lg focus:ring-blue-600 focus:border-blue-600 block p-3 outline-none transition-colors cursor-pointer font-medium shadow-sm">
                         <option value="op1">Prolongación de Dominante</option>
                         <option value="op2">Intercambio de Tritono</option>
                         <option value="op3">Aproximación Ómnibus</option>
                     </select>
 
-                    <label for="opcionTono" class="block font-semibold text-slate-800 mb-2 text-sm">Tono Inicial (Transposición):</label>
-                    <select id="opcionTono" aria-label="Seleccionar Tono" onchange="actualizarSimulador()" 
-                        class="w-full mb-4 bg-slate-50 border border-slate-300 hover:border-blue-400 text-slate-800 text-sm rounded-lg focus:ring-blue-600 focus:border-blue-600 block p-3 outline-none transition-colors cursor-pointer font-medium shadow-sm">
-                        <option value="0" selected>Sol (G)</option>
-                        <option value="1">Sol# / Lab (G#)</option>
-                        <option value="2">La (A)</option>
-                        <option value="3">La# / Sib (Bb)</option>
-                        <option value="4">Si (B)</option>
-                        <option value="5">Do (C)</option>
-                        <option value="6">Do# / Reb (C#)</option>
-                        <option value="7">Re (D)</option>
-                        <option value="8">Re# / Mib (Eb)</option>
-                        <option value="9">Mi (E)</option>
-                        <option value="10">Fa (F)</option>
-                        <option value="11">Fa# / Solb (F#)</option>
+                    <label for="opcionTono" class="block font-semibold text-slate-800 dark:text-slate-200 mb-2 text-sm transition-colors">Tono Inicial (Transposición):</label>
+                    <select id="opcionTono" onchange="actualizarSimulador()" class="w-full mb-4 bg-slate-50 dark:bg-slate-700 dark:text-white border border-slate-300 dark:border-slate-600 hover:border-blue-400 dark:hover:border-blue-500 text-slate-800 text-sm rounded-lg focus:ring-blue-600 focus:border-blue-600 block p-3 outline-none transition-colors cursor-pointer font-medium shadow-sm">
+                        <option value="0" selected>Sol</option>
+                        <option value="1">Sol# / Lab</option>
+                        <option value="2">La</option>
+                        <option value="3">La# / Sib</option>
+                        <option value="4">Si</option>
+                        <option value="5">Do</option>
+                        <option value="6">Do# / Reb</option>
+                        <option value="7">Re</option>
+                        <option value="8">Re# / Mib</option>
+                        <option value="9">Mi</option>
+                        <option value="10">Fa</option>
+                        <option value="11">Fa# / Solb</option>
                     </select>
 
-                    <label class="flex items-center cursor-pointer group mt-2 bg-slate-50 p-3 sm:p-4 rounded-lg border border-slate-200 hover:border-blue-400 transition-colors">
-                        <div class="relative">
-                            <input type="checkbox" id="checkCiclo" onchange="actualizarSimulador()" class="sr-only">
-                            <div class="block bg-slate-300 w-12 h-7 rounded-full transition-colors duration-300 ease-in-out group-hover:bg-slate-400" id="toggleBg"></div>
-                            <div class="dot absolute left-1 top-1 bg-white w-5 h-5 rounded-full transition-transform duration-300 ease-in-out" id="toggleDot"></div>
-                        </div>
-                        <div class="ml-3 text-sm font-semibold text-slate-700">
-                            Ciclo completo (13 pasos)
-                        </div>
-                    </label>
+                    <div class="flex flex-col gap-3">
+                        <label class="flex items-center cursor-pointer group bg-slate-50 dark:bg-slate-700/50 p-3 sm:p-4 rounded-lg border border-slate-200 dark:border-slate-600 hover:border-blue-400 transition-colors">
+                            <div class="relative">
+                                <input type="checkbox" id="checkCiclo" onchange="actualizarSimulador()" class="sr-only">
+                                <div class="block bg-slate-300 dark:bg-slate-600 w-11 h-6 rounded-full transition-colors duration-300 ease-in-out group-hover:bg-slate-400" id="toggleBg"></div>
+                                <div class="dot absolute left-1 top-1 bg-white w-4 h-4 rounded-full transition-transform duration-300 ease-in-out" id="toggleDot"></div>
+                            </div>
+                            <div class="ml-3 text-sm font-semibold text-slate-700 dark:text-slate-200 transition-colors">Completar octava (Ciclo continuo)</div>
+                        </label>
+                        
+                        <label class="flex items-center cursor-pointer group bg-slate-50 dark:bg-slate-700/50 p-3 sm:p-4 rounded-lg border border-slate-200 dark:border-slate-600 hover:border-purple-400 transition-colors">
+                            <div class="relative">
+                                <input type="checkbox" id="checkRomano" onchange="actualizarSimulador()" class="sr-only">
+                                <div class="block bg-slate-300 dark:bg-slate-600 w-11 h-6 rounded-full transition-colors duration-300 ease-in-out group-hover:bg-slate-400" id="toggleRomanoBg"></div>
+                                <div class="dot absolute left-1 top-1 bg-white w-4 h-4 rounded-full transition-transform duration-300 ease-in-out" id="toggleRomanoDot"></div>
+                            </div>
+                            <div class="ml-3 text-sm font-semibold text-slate-700 dark:text-slate-200 transition-colors">Cifrado Funcional (Romano)</div>
+                        </label>
 
-                    <div class="mt-6 border-t border-slate-200 pt-5">
+                        <label class="flex items-center cursor-pointer group bg-slate-50 dark:bg-slate-700/50 p-3 sm:p-4 rounded-lg border border-slate-200 dark:border-slate-600 hover:border-orange-400 transition-colors">
+                            <div class="relative">
+                                <input type="checkbox" id="checkArpegio" class="sr-only" onchange="toggleArpegioVisual()">
+                                <div class="block bg-slate-300 dark:bg-slate-600 w-11 h-6 rounded-full transition-colors duration-300 ease-in-out group-hover:bg-slate-400" id="toggleArpegioBg"></div>
+                                <div class="dot absolute left-1 top-1 bg-white w-4 h-4 rounded-full transition-transform duration-300 ease-in-out" id="toggleArpegioDot"></div>
+                            </div>
+                            <div class="ml-3 text-sm font-semibold text-slate-700 dark:text-slate-200 transition-colors">Modo Arpegiado (Strumming)</div>
+                        </label>
+
+                        <label class="flex items-center cursor-pointer group bg-slate-50 dark:bg-slate-700/50 p-3 sm:p-4 rounded-lg border border-slate-200 dark:border-slate-600 hover:border-indigo-400 transition-colors">
+                            <div class="relative">
+                                <input type="checkbox" id="checkDark" onchange="toggleDarkMode()" class="sr-only">
+                                <div class="block bg-slate-300 dark:bg-slate-600 w-11 h-6 rounded-full transition-colors duration-300 ease-in-out group-hover:bg-slate-400" id="toggleDarkBg"></div>
+                                <div class="dot absolute left-1 top-1 bg-white w-4 h-4 rounded-full transition-transform duration-300 ease-in-out" id="toggleDarkDot"></div>
+                            </div>
+                            <div class="ml-3 text-sm font-semibold text-slate-700 dark:text-slate-200 transition-colors">Modo Oscuro</div>
+                        </label>
+                    </div>
+
+                    <div class="mt-6 border-t border-slate-200 dark:border-slate-700 pt-5 transition-colors">
                         <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-3 mb-3">
-                            <span class="text-sm font-semibold text-slate-800">Reproducción Sonora</span>
+                            <span class="text-sm font-semibold text-slate-800 dark:text-slate-200 transition-colors">Velocidad</span>
                             <div class="flex items-center gap-2 flex-grow sm:flex-grow-0">
-                                <span class="text-xs text-slate-500 font-medium">BPM:</span>
-                                <input type="range" id="tempoSlider" min="40" max="140" value="70" class="w-full sm:w-24 h-2 bg-slate-200 rounded-lg appearance-none cursor-pointer">
-                                <span id="tempoValue" class="text-xs text-slate-600 font-bold w-6 text-right">70</span>
+                                <span class="text-xs text-slate-500 dark:text-slate-400 font-medium">BPM:</span>
+                                <input type="range" id="tempoSlider" min="40" max="140" value="70" class="w-full sm:w-24 h-2 bg-slate-200 dark:bg-slate-600 rounded-lg appearance-none cursor-pointer">
+                                <span id="tempoValue" class="text-xs text-slate-600 dark:text-slate-300 font-bold w-6 text-right">70</span>
                             </div>
                         </div>
+                        
                         <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-3 mb-4">
-                            <span class="text-sm font-semibold text-slate-800">Volumen Audio</span>
+                            <span class="text-sm font-semibold text-slate-800 dark:text-slate-200 transition-colors">Volumen</span>
                             <div class="flex items-center gap-2 flex-grow sm:flex-grow-0">
-                                <span class="text-xs text-slate-500 font-medium text-center w-6">Vol:</span>
-                                <input type="range" id="volumeSlider" min="-30" max="0" value="-6" class="w-full sm:w-24 h-2 bg-slate-200 rounded-lg appearance-none cursor-pointer">
-                                <span id="volumeValue" class="text-xs text-slate-600 font-bold w-12 text-right">-6 dB</span>
+                                <span class="text-xs text-slate-500 dark:text-slate-400 font-medium text-center w-6">Vol:</span>
+                                <input type="range" id="volumeSlider" min="-30" max="5" value="-6" class="w-full sm:w-24 h-2 bg-slate-200 dark:bg-slate-600 rounded-lg appearance-none cursor-pointer">
+                                <span id="volumeValue" class="text-xs text-slate-600 dark:text-slate-300 font-bold w-12 text-right">-6 dB</span>
                             </div>
                         </div>
-                        <button id="btnPlay" onclick="togglePlay()" class="w-full bg-blue-600 hover:bg-blue-700 text-white font-semibold py-3 px-4 rounded-lg shadow-sm transition-all flex items-center justify-center gap-2 text-sm sm:text-base">
-                            <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="currentColor"><path d="M8 5v14l11-7z"/></svg>
-                            <span>Escuchar Progresión</span>
+
+                        <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-3 mb-5 border-t border-slate-100 dark:border-slate-700 pt-3 transition-colors">
+                            <span class="text-sm font-semibold text-slate-800 dark:text-slate-200">Timbre</span>
+                            <select id="opcionTimbre" onchange="cambiarTimbre()" class="w-full sm:w-auto bg-slate-50 dark:bg-slate-700 dark:text-white border border-slate-300 dark:border-slate-600 hover:border-blue-400 text-slate-700 text-xs rounded focus:ring-blue-500 focus:border-blue-500 block p-1.5 outline-none cursor-pointer transition-colors shadow-sm">
+                                <option value="sine" selected>Ondas Senoidales</option>
+                                <option value="triangle">Triangular (Cálido)</option>
+                                <option value="sawtooth">Diente de Sierra</option>
+                                <option value="square">Cuadrada (Sintetizador)</option>
+                            </select>
+                        </div>
+
+                        <div class="flex flex-col gap-2">
+                            <button id="btnPlay" onclick="togglePlay()" class="w-full bg-blue-600 hover:bg-blue-700 text-white font-semibold py-3 px-4 rounded-lg shadow-sm transition-all flex items-center justify-center gap-2 text-sm sm:text-base">
+                                <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="currentColor"><path d="M8 5v14l11-7z"/></svg>
+                                <span>Escuchar Progresión</span>
+                            </button>
+                            
+                            <button id="btnMidi" onclick="exportarMIDI()" class="w-full bg-green-600 hover:bg-green-700 text-white font-semibold py-2 px-4 rounded-lg shadow-sm transition-all flex items-center justify-center gap-2 text-sm">
+                                <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path><polyline points="7 10 12 15 17 10"></polyline><line x1="12" y1="15" x2="12" y2="3"></line></svg>
+                                <span>Descargar MIDI</span>
+                            </button>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="bg-blue-50/70 dark:bg-blue-900/20 p-4 sm:p-5 rounded-xl shadow-sm border border-blue-100 dark:border-blue-800/50 flex-grow transition-colors">
+                    <h3 class="text-xs font-bold text-blue-800 dark:text-blue-400 uppercase tracking-wider mb-2">Contexto Teórico</h3>
+                    <p id="descripcionTeorica" class="text-xs sm:text-sm text-slate-700 dark:text-slate-300 leading-relaxed" aria-live="polite"></p>
+                </div>
+            </div>
+
+            <div class="w-full lg:w-2/3 flex flex-col gap-4">
+                <div class="bg-white dark:bg-slate-800 rounded-xl shadow-lg border border-slate-200 dark:border-slate-700 p-2 sm:p-4 flex flex-col relative overflow-hidden flex-grow min-h-[50vh] lg:min-h-[600px] transition-colors duration-300">
+                    <div id="chart" class="w-full flex-grow min-h-[400px]"></div>
+                    
+                    <div class="mt-4 flex flex-wrap justify-center gap-3 sm:gap-8 border-t border-slate-100 dark:border-slate-700 pt-4 pb-2 px-2 z-10 bg-white dark:bg-slate-800 transition-colors">
+                        <div id="leg-0" class="legend-item flex items-center gap-2 cursor-pointer hover:bg-slate-50 dark:hover:bg-slate-700 p-2 rounded-lg" onclick="toggleVoice(0)">
+                            <div class="w-10 h-1 bg-[#ea580c] relative flex justify-center rounded-full"><div class="w-3 h-3 bg-[#ea580c] rounded-full absolute -top-1 border-2 border-white dark:border-slate-800 transition-colors"></div></div>
+                            <span class="text-sm font-bold text-slate-700 dark:text-slate-200 select-none">Soprano</span>
+                        </div>
+                        <div id="leg-1" class="legend-item flex items-center gap-2 cursor-pointer hover:bg-slate-50 dark:hover:bg-slate-700 p-2 rounded-lg" onclick="toggleVoice(1)">
+                            <div class="w-10 h-0.5 border-t-2 border-dashed border-[#a855f7] relative flex justify-center"><div class="w-2.5 h-2.5 bg-[#a855f7] rounded-full absolute -top-1.5"></div></div>
+                            <span class="text-sm font-bold text-slate-700 dark:text-slate-200 select-none">Contralto</span>
+                        </div>
+                        <div id="leg-2" class="legend-item flex items-center gap-2 cursor-pointer hover:bg-slate-50 dark:hover:bg-slate-700 p-2 rounded-lg" onclick="toggleVoice(2)">
+                            <div class="w-10 h-0.5 border-t-2 border-dashed border-[#10b981] relative flex justify-center"><div class="w-2.5 h-2.5 bg-[#10b981] rounded-full absolute -top-1.5"></div></div>
+                            <span class="text-sm font-bold text-slate-700 dark:text-slate-200 select-none">Tenor</span>
+                        </div>
+                        <div id="leg-3" class="legend-item flex items-center gap-2 cursor-pointer hover:bg-slate-50 dark:hover:bg-slate-700 p-2 rounded-lg" onclick="toggleVoice(3)">
+                            <div class="w-10 h-1 bg-[#3b82f6] relative flex justify-center rounded-full"><div class="w-3 h-3 bg-[#3b82f6] rounded-full absolute -top-1 border-2 border-white dark:border-slate-800 transition-colors"></div></div>
+                            <span class="text-sm font-bold text-slate-700 dark:text-slate-200 select-none">Bajo</span>
+                        </div>
+                    </div>
+                    
+                    <div class="absolute top-3 right-3 z-20 flex gap-2">
+                        <button onclick="exportarGrafico()" class="bg-white/90 dark:bg-slate-700/90 backdrop-blur hover:bg-slate-50 dark:hover:bg-slate-600 text-slate-600 dark:text-slate-200 hover:text-blue-600 dark:hover:text-blue-400 p-2 rounded-lg shadow-sm border border-slate-200 dark:border-slate-600 transition-all text-xs flex items-center gap-1.5" title="Exportar como Imagen PNG">
+                            <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="18" height="18" rx="2" ry="2"></rect><circle cx="8.5" cy="8.5" r="1.5"></circle><polyline points="21 15 16 10 5 21"></polyline></svg>
                         </button>
                     </div>
                 </div>
 
-                <div class="bg-blue-50/70 p-4 sm:p-5 rounded-xl shadow-sm border border-blue-100 flex-grow">
-                    <h3 class="text-xs font-bold text-blue-800 uppercase tracking-wider mb-2">Contexto Teórico</h3>
-                    <p id="descripcionTeorica" class="text-xs sm:text-sm text-slate-700 leading-relaxed" aria-live="polite"></p>
-                </div>
-            </div>
-
-            <!-- Panel Derecho: Gráfico y Leyenda -->
-            <div class="w-full lg:w-2/3 bg-white rounded-xl shadow-lg border border-slate-200 p-2 sm:p-4 flex flex-col relative overflow-hidden">
-                
-                <!-- Indicador de reproducción visual -->
-                <div id="playHead" class="absolute top-0 bottom-0 w-8 bg-blue-100/40 border-x border-blue-300 pointer-events-none opacity-0 transition-opacity z-10 hidden" style="left: 0;"></div>
-
-                <!-- Contenedor del gráfico con altura responsiva -->
-                <div id="chart" class="w-full h-[50vh] min-h-[400px] md:min-h-[550px] lg:min-h-[650px]"></div>
-                
-                <div class="mt-2 sm:mt-4 flex flex-wrap justify-center gap-3 sm:gap-6 border-t border-slate-100 pt-4 pb-2 px-2">
-                    <div id="leg-0" class="legend-item flex items-center gap-2 cursor-pointer hover:bg-slate-50 p-2 rounded-lg touch-manipulation" onclick="toggleVoice(0)" title="Ocultar/mostrar Soprano">
-                        <div class="w-8 sm:w-10 h-1 sm:h-1.5 bg-[#ea580c] relative flex items-center justify-center rounded-full">
-                            <div class="w-3 h-3 sm:w-4 sm:h-4 bg-[#ea580c] rounded-full absolute border-2 border-white"></div>
-                        </div>
-                        <span class="text-xs sm:text-sm font-bold text-slate-700 select-none">Soprano</span>
-                    </div>
-                    <div id="leg-1" class="legend-item flex items-center gap-2 cursor-pointer hover:bg-slate-50 p-2 rounded-lg touch-manipulation" onclick="toggleVoice(1)" title="Ocultar/mostrar Contralto">
-                        <div class="w-8 sm:w-10 h-0.5 bg-transparent relative flex items-center justify-center border-t-2 border-dashed border-[#8b5cf6]">
-                            <div class="w-2 h-2 sm:w-2.5 sm:h-2.5 bg-[#8b5cf6] rounded-full absolute"></div>
-                        </div>
-                        <span class="text-xs sm:text-sm font-bold text-slate-700 select-none">Contralto</span>
-                    </div>
-                    <div id="leg-2" class="legend-item flex items-center gap-2 cursor-pointer hover:bg-slate-50 p-2 rounded-lg touch-manipulation" onclick="toggleVoice(2)" title="Ocultar/mostrar Tenor">
-                        <div class="w-8 sm:w-10 h-0.5 bg-transparent relative flex items-center justify-center border-t-2 border-dashed border-[#10b981]">
-                            <div class="w-2 h-2 sm:w-2.5 sm:h-2.5 bg-[#10b981] rounded-full absolute"></div>
-                        </div>
-                        <span class="text-xs sm:text-sm font-bold text-slate-700 select-none">Tenor</span>
-                    </div>
-                    <div id="leg-3" class="legend-item flex items-center gap-2 cursor-pointer hover:bg-slate-50 p-2 rounded-lg touch-manipulation" onclick="toggleVoice(3)" title="Ocultar/mostrar Bajo">
-                        <div class="w-8 sm:w-10 h-1 sm:h-1.5 bg-[#3b82f6] relative flex items-center justify-center rounded-full">
-                            <div class="w-3 h-3 sm:w-4 sm:h-4 bg-[#3b82f6] rounded-full absolute border-2 border-white"></div>
-                        </div>
-                        <span class="text-xs sm:text-sm font-bold text-slate-700 select-none">Bajo</span>
-                    </div>
-                </div>
-
+                <div id="piano-container" class="hide-scrollbar"></div>
             </div>
         </div>
-
-        <!-- Créditos del Autor -->
-        <footer class="w-full text-center mt-4 mb-6">
-            <p class="text-sm text-slate-500 font-medium">Simulador creado por <span class="font-bold text-slate-800">Juan Miguel Rios Redondo</span></p>
-        </footer>
+        <footer class="w-full text-center mt-2 mb-6"><p class="text-sm text-slate-500 dark:text-slate-400 font-medium">Simulador creado por <span class="font-bold text-slate-800 dark:text-slate-200">Juan Miguel Rios Redondo</span></p></footer>
     </main>
 
     <script>
         let voiceVisible = [true, true, true, true];
         let datosActuales = null;
-        let resizeTimeout;
+        let synth = null;
+        let isPlaying = false;
+        let loopEvent = null;
+        
+        const notasSostenidos = ["Do", "Do♯", "Re", "Re♯", "Mi", "Fa", "Fa♯", "Sol", "Sol♯", "La", "La♯", "Si"];
+        const notasBemoles = ["Do", "Re♭", "Re", "Mi♭", "Mi", "Fa", "Sol♭", "Sol", "La♭", "La", "Si♭", "Si"];
+
+        function getSmartNoteName(midiValue, direccionVoz) {
+            if (isNaN(midiValue)) return "";
+            const notaIndex = midiValue % 12;
+            if (direccionVoz > 0) return notasSostenidos[notaIndex];
+            return notasBemoles[notaIndex];
+        }
+
+        // ALGORITMO INTELIGENTE: Formatea números arábicos apilados de mayor a menor
+        function formatearCifradoRomano(texto) {
+            if (!texto) return "";
+            // Busca cadenas de dígitos separados por barras (ej. 6/4, 4/3, 6/5) ignorando números romanos
+            return texto.replace(/(\d+(?:\/\d+)+)/g, (match) => {
+                let numeros = match.split('/').map(Number).sort((a, b) => b - a);
+                // Usamos superíndice y subíndice para que Plotly los dibuje apilados al estilo clásico
+                return `<sup>${numeros[0]}</sup><sub>${numeros[1]}</sub>`; 
+            });
+        }
 
         const baseTeorica = {
-            op1: "<b>Prolongación de Dominante:</b> El intercambio de voces entre la fundamental y la tercera prolonga un acorde de séptima de dominante enlazando sus inversiones. Las voces extremas proceden por movimiento cromático contrario dispuestas simétricamente en torno a las notas centrales. Al rellenar este segmento diatónico con semitonos, las armonías intermedias funcionan como acordes de sexta aumentada alemana implícitos, manteniendo una fuerte direccionalidad sin perder la función original.",
-            op2: "<b>Intercambio de Tritono:</b> El movimiento cromático contrario abarca un tritono, intercambiando la tercera y la séptima para prolongar el acorde de dominante enlazando sus inversiones. Este modelo mantiene fijos la fundamental y la quinta en las voces internas, creando un eje de rotación armónica. Debido a su fuerte simetría, esta estructura genera una profunda inestabilidad direccional, permitiendo modulaciones fluidas si se interrumpe la progresión antes de completarse.",
-            op3: "<b>Aproximación Ómnibus (Secuencia Ómnibus):</b> Patrón simétrico en espejo que emplea conducción cromática por movimiento contrario. Alterna sistemáticamente acordes de séptima y sextas aumentadas alemanas en torno a voces internas que operan como pedales estáticos. Esta técnica debilita la sensación de un centro tonal fijo y divide simétricamente la octava, siendo un recurso crucial que empuja los límites de la tonalidad tradicional hacia la armonía cromática avanzada."
+            op1: "<b>Prolongación de Dominante:</b> Muestra el cromatismo clásico por movimiento contrario. El intercambio entre la fundamental y la tercera prolonga un acorde de séptima de dominante en estado fundamental. Las armonías intermedias funcionan como acordes de sexta aumentada alemana implícitos, dispuestas simétricamente en torno a los pedales centrales.",
+            op2: "<b>Intercambio de Tritono:</b> El intercambio abarca un tritono armónico, prolongando el acorde de séptima de dominante enlazando sus inversiones. Este modelo mantiene fijos la fundamental y la quinta en las otras voces, mientras que la tercera y la séptima intercambian sus posiciones cromáticamente para crear inestabilidad direccional pura.",
+            op3: "<b>Aproximación Ómnibus:</b> El patrón simétrico en espejo definitivo. Alterna sistemáticamente acordes de séptima dominante en fundamental con acordes de sexta aumentada alemana. Trata a los tritonos no como intervalos que requieren resolución, sino como entidades que giran en torno a voces internas (pedales)."
         };
-
-        // Escala Cromática Completa (con enarmonías combinadas para simplificar visualización)
-        const notasCromaticas = ["Do", "Do♯/Re♭", "Re", "Re♯/Mi♭", "Mi", "Fa", "Fa♯/Sol♭", "Sol", "Sol♯/La♭", "La", "La♯/Si♭", "Si"];
-
-        function midiToNoteName(midiValue) {
-            if (isNaN(midiValue)) return "";
-            const octava = Math.floor(midiValue / 12) - 1;
-            const notaIndex = midiValue % 12;
-            return notasCromaticas[notaIndex];
-        }
 
         function toggleVoice(index) {
             voiceVisible[index] = !voiceVisible[index];
             const el = document.getElementById(`leg-${index}`);
-            if(voiceVisible[index]) {
-                el.classList.remove('legend-disabled');
-            } else {
-                el.classList.add('legend-disabled');
+            if(voiceVisible[index]) { el.classList.remove('legend-disabled'); } 
+            else { el.classList.add('legend-disabled'); }
+            try { Plotly.restyle('chart', { visible: voiceVisible[index] }, [index]); } catch(e){}
+        }
+        
+        function toggleArpegioVisual() {
+            const isActive = document.getElementById("checkArpegio").checked;
+            const toggleBg = document.getElementById("toggleArpegioBg");
+            const toggleDot = document.getElementById("toggleArpegioDot");
+            toggleBg.className = isActive ? "block bg-orange-500 w-11 h-6 rounded-full transition-colors duration-300 ease-in-out" : "block bg-slate-300 dark:bg-slate-600 w-11 h-6 rounded-full transition-colors duration-300 ease-in-out";
+            toggleDot.style.transform = isActive ? "translateX(1.25rem)" : "translateX(0)";
+        }
+
+        function toggleDarkMode() {
+            document.documentElement.classList.toggle('dark');
+            const isDark = document.documentElement.classList.contains('dark');
+            const toggleBg = document.getElementById("toggleDarkBg");
+            const toggleDot = document.getElementById("toggleDarkDot");
+            toggleBg.className = isDark ? "block bg-indigo-500 w-11 h-6 rounded-full transition-colors duration-300 ease-in-out" : "block bg-slate-300 w-11 h-6 rounded-full transition-colors duration-300 ease-in-out";
+            toggleDot.style.transform = isDark ? "translateX(1.25rem)" : "translateX(0)";
+            actualizarSimulador(); 
+        }
+
+        const minMidi = 43; 
+        const maxMidi = 86; 
+        
+        function renderPiano() {
+            const container = document.getElementById('piano-container');
+            container.innerHTML = '';
+            let whiteKeyCount = 0;
+            for (let i = minMidi; i <= maxMidi; i++) {
+                const noteClass = i % 12;
+                const isWhite = [0, 2, 4, 5, 7, 9, 11].includes(noteClass);
+                const keyDiv = document.createElement('div');
+                keyDiv.id = `key-${i}`;
+                if (isWhite) {
+                    keyDiv.className = 'white-key';
+                    container.appendChild(keyDiv);
+                    whiteKeyCount++;
+                } else {
+                    keyDiv.className = 'black-key';
+                    const leftPos = (whiteKeyCount * 34) - 17;
+                    keyDiv.style.left = `${leftPos}px`;
+                    container.appendChild(keyDiv);
+                }
             }
-            Plotly.restyle('chart', { visible: voiceVisible[index] ? true : false }, [index]);
+        }
+        
+        function highlightKey(midiVal, voiceIndex) {
+            const key = document.getElementById(`key-${midiVal}`);
+            if (key) { key.classList.add(`key-active-v${voiceIndex}`); }
+        }
+        function clearKey(midiVal, voiceIndex) {
+            const key = document.getElementById(`key-${midiVal}`);
+            if (key) { key.classList.remove(`key-active-v${voiceIndex}`); }
+        }
+
+        function transponerCifradoAmericano(acordeBase, offset) {
+            if(!acordeBase) return "";
+            const raicesSostenidos = ["C", "C#", "D", "D#", "E", "F", "F#", "G", "G#", "A", "A#", "B"];
+            const raicesBemoles = ["C", "Db", "D", "Eb", "E", "F", "Gb", "G", "Ab", "A", "Bb", "B"];
+            return acordeBase.replace(/([A-G][#b]?)/g, (match) => {
+                let index = raicesSostenidos.indexOf(match);
+                if (index === -1) index = raicesBemoles.indexOf(match);
+                if (index === -1) return match; 
+                let newIndex = (index + offset) % 12;
+                if (newIndex < 0) newIndex += 12;
+                return raicesSostenidos[newIndex]; 
+            });
         }
 
         function actualizarSimulador() {
-            if (isPlaying) { stopSequence(); }
+            const wasPlaying = isPlaying;
+            if (isPlaying) stopSequence();
 
             const seleccion = document.getElementById("opcionVoicing").value;
             const cicloCompleto = document.getElementById("checkCiclo").checked;
+            const modoRomano = document.getElementById("checkRomano").checked;
             const offsetTono = parseInt(document.getElementById("opcionTono").value);
-            
-            // Detectar si es móvil para ajustar tamaño de fuente y márgenes
-            const isMobile = window.innerWidth < 640;
-            const isTablet = window.innerWidth >= 640 && window.innerWidth < 1024;
-            
+            const isDark = document.documentElement.classList.contains('dark');
+            const isMobile = window.innerWidth < 768;
+
             const toggleBg = document.getElementById("toggleBg");
             const toggleDot = document.getElementById("toggleDot");
-            if(cicloCompleto) {
-                toggleBg.classList.replace("bg-slate-300", "bg-blue-500");
-                toggleDot.style.transform = "translateX(1.25rem)";
-            } else {
-                toggleBg.classList.replace("bg-blue-500", "bg-slate-300");
-                toggleDot.style.transform = "translateX(0)";
-            }
+            toggleBg.className = cicloCompleto ? "block bg-blue-500 w-11 h-6 rounded-full transition-colors duration-300" : "block bg-slate-300 dark:bg-slate-600 w-11 h-6 rounded-full transition-colors duration-300";
+            toggleDot.style.transform = cicloCompleto ? "translateX(1.25rem)" : "translateX(0)";
 
-            const descEl = document.getElementById("descripcionTeorica");
-            descEl.style.opacity = 0;
-            setTimeout(() => {
-                let txt = baseTeorica[seleccion];
-                if(offsetTono !== 0) txt += `<br><br><span class="text-blue-600 font-semibold">Tono transpuesto ${offsetTono} semitonos.</span>`;
-                if(cicloCompleto) txt += "<br><br><i>Visualizando ciclo continuo de octava completa con todos sus acordes resultantes.</i>";
-                descEl.innerHTML = txt;
-                descEl.style.opacity = 1;
-            }, 150);
+            const toggleRomanoBg = document.getElementById("toggleRomanoBg");
+            const toggleRomanoDot = document.getElementById("toggleRomanoDot");
+            toggleRomanoBg.className = modoRomano ? "block bg-purple-500 w-11 h-6 rounded-full transition-colors duration-300" : "block bg-slate-300 dark:bg-slate-600 w-11 h-6 rounded-full transition-colors duration-300";
+            toggleRomanoDot.style.transform = modoRomano ? "translateX(1.25rem)" : "translateX(0)";
+
+            const raicesBase = ["Sol", "Sol# / Lab", "La", "La# / Sib", "Si", "Do", "Do# / Reb", "Re", "Re# / Mib", "Mi", "Fa", "Fa# / Solb"];
+            let nombreTonoActual = raicesBase[offsetTono];
+
+            document.getElementById("descripcionTeorica").innerHTML = baseTeorica[seleccion] + 
+                (offsetTono !== 0 ? `<br><br><span class="text-blue-600 dark:text-blue-400 font-semibold border-t border-blue-100 dark:border-blue-800/50 pt-2 mt-2 block">Tono transpuesto a ${nombreTonoActual}.</span>` : "");
 
             let pasos = cicloCompleto ? 13 : 4;
             let xVals = Array.from({length: pasos}, (_, i) => i);
-            let t, v1Y = [], v2Y = [], v3Y = [], v4Y = [], xLabels = [];
+            let v1Y = [], v2Y = [], v3Y = [], v4Y = [], xLabels = [];
+            let v1N = [], v2N = [], v3N = [], v4N = [];
+            let pos1 = [], pos2 = [], pos3 = [], pos4 = [];
 
-            // VALORES BASE MIDI PARA TONO SOL (G)
-            let baseV1, baseV2, baseV3, baseV4; 
-            let direccionV1, direccionV2, direccionV3, direccionV4;
+            let baseV1, baseV2, baseV3, baseV4, dirV1, dirV2, dirV3, dirV4, cifradosRomanos, cifradosAmericanos, sextasAumentadas;
 
             if (seleccion === "op1") {
-                t = cicloCompleto ? "Ciclo Intercambio F. y 3ra (13 pasos)" : "Prolongación por intercambio";
-                baseV1 = 71; direccionV1 = 1;   // Si sube
-                baseV2 = 65; direccionV2 = 0;   // Fa fijo
-                baseV3 = 62; direccionV3 = 0;   // Re fijo
-                baseV4 = 55; direccionV4 = -1;  // Sol baja
+                baseV1 = 71; dirV1 = 1;  
+                baseV2 = 65; dirV2 = 0;  
+                baseV3 = 62; dirV3 = 0;  
+                baseV4 = 55; dirV4 = -1; 
+                cifradosRomanos = ["V7", "V7(b9)", "Ger+6", "I6/4", "V7/IV", "Ger+6/IV", "IV6/4", "V7/bVI", "Ger+6/bVI", "bVI6/4", "V7/vi", "Ger+6/vi", "V7"];
+                cifradosAmericanos = ["G7", "Bm/F#", "G7/F", "E7", "G#m/D#", "E7/D", "C#7", "Fm/C", "C#7/B", "Bb7", "Dm/A", "Bb7/Ab", "G7"];
+                sextasAumentadas = [2, 5, 8, 11]; 
             } else if (seleccion === "op2") {
-                t = cicloCompleto ? "Ciclo Intercambio 3ra y 7ma (13 pasos)" : "Prolongación de Tritono";
-                baseV1 = 65; direccionV1 = 1;   // Fa sube
-                baseV2 = 62; direccionV2 = 0;   // Re fijo
-                baseV3 = 59; direccionV3 = -1;  // Si baja
-                baseV4 = 55; direccionV4 = 0;   // Sol fijo
+                baseV1 = 65; dirV1 = 1;  
+                baseV2 = 62; dirV2 = 0;  
+                baseV3 = 59; dirV3 = -1; 
+                baseV4 = 55; dirV4 = 0;  
+                cifradosRomanos = ["V7", "V7(b13)", "V+7", "V7(b9)", "V7/bII", "V7(b13)/bII", "V+7/bII", "V7(b9)/bII", "V7/bIII", "V7(b13)/bIII", "V+7/bIII", "V7(b9)/bIII", "V7"];
+                cifradosAmericanos = ["G7", "Gm(maj7)", "Gsus2", "G7(b9)", "Ab7", "Abm(maj7)", "Absus2", "Ab7(b9)", "A7", "Am(maj7)", "Asus2", "A7(b9)", "Bb7"];
+                sextasAumentadas = [];
             } else {
-                t = cicloCompleto ? "Ciclo Ómnibus Base (13 Pasos)" : "Aproximación Ómnibus Simétrica";
-                baseV1 = 65; direccionV1 = 1;   // Fa sube
-                baseV2 = 62; direccionV2 = 0;   // Re fijo
-                baseV3 = 59; direccionV3 = 0;   // Si fijo
-                baseV4 = 55; direccionV4 = -1;  // Sol baja
+                baseV1 = 65; dirV1 = 1;  
+                baseV2 = 62; dirV2 = 0;  
+                baseV3 = 59; dirV3 = 0;  
+                baseV4 = 55; dirV4 = -1; 
+                cifradosRomanos = ["V7", "viio7", "Ger+6", "I6/4", "V7", "viio7", "Ger+6", "I6/4", "V7", "viio7", "Ger+6", "I6/4", "V7"];
+                cifradosAmericanos = ["G7", "Bm/F#", "G7/F", "Em", "G7", "Bm/F#", "G7/F", "Em", "G7", "Bm/F#", "G7/F", "Em", "G7"];
+                sextasAumentadas = [2, 6, 10];
             }
 
-            let v1N = [], v2N = [], v3N = [], v4N = [];
             let minY = 100, maxY = 0;
 
             for (let i = 0; i < pasos; i++) {
-                // Calcular altura MIDI aplicando transposición
-                let y1 = baseV1 + (i * direccionV1) + offsetTono;
-                let y2 = baseV2 + (i * direccionV2) + offsetTono;
-                let y3 = baseV3 + (i * direccionV3) + offsetTono;
-                let y4 = baseV4 + (i * direccionV4) + offsetTono;
+                let y1 = baseV1 + (i * dirV1) + offsetTono;
+                let y2 = baseV2 + (i * dirV2) + offsetTono;
+                let y3 = baseV3 + (i * dirV3) + offsetTono;
+                let y4 = baseV4 + (i * dirV4) + offsetTono;
 
                 v1Y.push(y1); v2Y.push(y2); v3Y.push(y3); v4Y.push(y4);
-                v1N.push(midiToNoteName(y1)); v2N.push(midiToNoteName(y2)); 
-                v3N.push(midiToNoteName(y3)); v4N.push(midiToNoteName(y4));
+                v1N.push(getSmartNoteName(y1, dirV1)); 
+                v2N.push(getSmartNoteName(y2, 1)); 
+                v3N.push(getSmartNoteName(y3, -1)); 
+                v4N.push(getSmartNoteName(y4, dirV4));
 
-                // Registrar extremos para ajustar zoom del gráfico
-                if(y1 > maxY) maxY = y1; if(y1 < minY) minY = y1;
-                if(y4 > maxY) maxY = y4; if(y4 < minY) minY = y4;
-            }
+                let arrY = [y1, y2, y3, y4];
+                let stepMax = Math.max(...arrY);
+                let stepMin = Math.min(...arrY);
+                if(stepMax > maxY) maxY = stepMax;
+                if(stepMin < minY) minY = stepMin;
 
-            for (let i = 0; i < pasos; i++) {
-                let cifrado = "";
-                let subindice = "";
-                let esSextaAumentada = false;
-
-                // Identificador básico matemático de acordes según intervalos (Simplificado para la demo)
-                // Depende de la opción seleccionada y el paso
-                if (seleccion === "op1") {
-                    if (i === 0 || i === 12) cifrado = "7";
-                    else if (i === 1 || i === 11) cifrado = "7(b9)";
-                    else if (i % 2 === 0) { cifrado = "7"; esSextaAumentada = true; }
-                    else cifrado = "m7(b5)";
-                } else if (seleccion === "op2") {
-                    if (i % 2 === 0) cifrado = "7";
-                    else cifrado = "m(maj7)";
-                } else {
-                    if (i % 4 === 0) cifrado = "7";
-                    else if (i % 2 !== 0) cifrado = "m/b5";
-                    else { cifrado = "7"; esSextaAumentada = true; }
+                let esSextaAumentada = sextasAumentadas.includes(i);
+                
+                // Aplicamos el formato avanzado de Cifrado Romano (Ordenación matemática y Sup/Sub)
+                let acordeFinal = modoRomano 
+                    ? formatearCifradoRomano(cifradosRomanos[i] || "X") 
+                    : transponerCifradoAmericano(cifradosAmericanos[i], offsetTono);
+                
+                let etiquetaFinal = `<b>${acordeFinal}</b>`;
+                if(esSextaAumentada) {
+                    const redColor = isDark ? '#f87171' : '#ef4444'; 
+                    etiquetaFinal += `<br><span style="color:${redColor}; font-size:10px;">★ 6ta Aum</span>`;
                 }
-
-                // Obtener fundamental dinámica (asumiendo Bajo o nota más grave predominante)
-                let notaRaiz = midiToNoteName(v4Y[i]); 
-                if (seleccion === "op2") notaRaiz = midiToNoteName(v4Y[0]); // El bajo es fijo aquí
-                
-                let etiquetaFinal = `<b>${notaRaiz}${cifrado}</b>`;
-                if(esSextaAumentada) etiquetaFinal += `<br><span style="color:#ef4444; font-size:10px;">★ 6ta Aum</span>`;
-                
                 xLabels.push(etiquetaFinal);
+
+                pos1.push('top center');
+                pos2.push('top center');    
+                pos3.push('bottom center'); 
+                pos4.push('bottom center'); 
             }
 
             datosActuales = { pasos: pasos, v1: v1Y, v2: v2Y, v3: v3Y, v4: v4Y };
 
-            let pos1 = [], pos2 = [], pos3 = [], pos4 = [];
-            for (let i = 0; i < pasos; i++) {
-                pos1.push('top center'); // Soprano siempre sube
-                pos2.push('top center'); // Contralto fija hacia arriba
-                pos3.push('bottom center'); // Tenor fija hacia abajo
-                pos4.push('bottom center'); // Bajo siempre baja
-            }
+            const fontSizeData = isMobile ? 10 : 12;
+            const darkTextColor = isDark ? '#cbd5e1' : '#475569';
 
-            // Tamaños responsivos
-            const lineThickness = isMobile ? 3 : 4;
-            const markerSize = isMobile ? 7 : 9;
-            const noteFontSize = isMobile ? (cicloCompleto ? 9 : 11) : (cicloCompleto ? 11 : 13);
-            
             const data = [
-                { 
-                    x: xVals, y: v1Y, text: v1N, 
-                    mode: 'lines+markers+text', textposition: pos1,
-                    line: { color: '#ea580c', width: lineThickness }, marker: { size: markerSize, color: '#ea580c' },
-                    font: { weight: 'bold', size: noteFontSize, color: '#ea580c' }, hoverinfo: 'none',
-                    visible: voiceVisible[0] ? true : false
-                },
-                { 
-                    x: xVals, y: v2Y, text: v2N, 
-                    mode: 'lines+markers+text', textposition: pos2, 
-                    line: { color: '#8b5cf6', dash: 'dash', width: lineThickness - 1 }, marker: { size: markerSize - 2, color: '#8b5cf6' },
-                    font: { size: noteFontSize, color: '#8b5cf6' }, hoverinfo: 'none',
-                    visible: voiceVisible[1] ? true : false
-                },
-                { 
-                    x: xVals, y: v3Y, text: v3N, 
-                    mode: 'lines+markers+text', textposition: pos3,
-                    line: { color: '#10b981', dash: 'dash', width: lineThickness - 1 }, marker: { size: markerSize - 2, color: '#10b981' },
-                    font: { size: noteFontSize, color: '#10b981' }, hoverinfo: 'none',
-                    visible: voiceVisible[2] ? true : false
-                },
-                { 
-                    x: xVals, y: v4Y, text: v4N, 
-                    mode: 'lines+markers+text', textposition: pos4,
-                    line: { color: '#3b82f6', width: lineThickness }, marker: { size: markerSize, color: '#3b82f6' },
-                    font: { weight: 'bold', size: noteFontSize, color: '#3b82f6' }, hoverinfo: 'none',
-                    visible: voiceVisible[3] ? true : false
-                }
+                { x: xVals, y: v1Y, text: v1N, mode: 'lines+markers+text', textposition: pos1, line: { color: '#ea580c', width: 3 }, marker: { size: 8 }, font: { size: fontSizeData, color: '#ea580c', weight: 'bold' }, hoverinfo: 'none', visible: voiceVisible[0] },
+                { x: xVals, y: v2Y, text: v2N, mode: 'lines+markers+text', textposition: pos2, line: { color: '#a855f7', dash: 'dash', width: 2 }, marker: { size: 6 }, font: { size: fontSizeData-1, color: '#a855f7' }, hoverinfo: 'none', visible: voiceVisible[1] },
+                { x: xVals, y: v3Y, text: v3N, mode: 'lines+markers+text', textposition: pos3, line: { color: '#10b981', dash: 'dash', width: 2 }, marker: { size: 6 }, font: { size: fontSizeData-1, color: '#10b981' }, hoverinfo: 'none', visible: voiceVisible[2] },
+                { x: xVals, y: v4Y, text: v4N, mode: 'lines+markers+text', textposition: pos4, line: { color: '#3b82f6', width: 3 }, marker: { size: 8 }, font: { size: fontSizeData, color: '#3b82f6', weight: 'bold' }, hoverinfo: 'none', visible: voiceVisible[3] }
             ];
 
-            // Configuración dinámica del layout según pantalla
-            const bottomMargin = isMobile ? (cicloCompleto ? 140 : 100) : (cicloCompleto ? 180 : 120);
-            const tickFontSize = isMobile ? (cicloCompleto ? 10 : 12) : (cicloCompleto ? 11 : 14);
+            const gridColor = isDark ? '#334155' : '#e2e8f0';
+            const tickColor = isDark ? '#f8fafc' : '#0f172a';
 
             const layout = {
-                title: { 
-                    text: t, 
-                    font: { size: isMobile ? 14 : 17, weight: 'bold', color: '#1e293b' },
-                    y: 0.95
-                },
-                yaxis: { 
-                    range: [minY - 4, maxY + 4], // Zoom dinámico con aire 
-                    showticklabels: false, zeroline: false, showgrid: true, gridcolor: '#f1f5f9', fixedrange: true 
-                },
-                xaxis: {
-                    tickvals: xVals, ticktext: xLabels,
-                    range: [-0.5, pasos - 0.5], 
-                    showgrid: true, gridcolor: '#f1f5f9', zeroline: false,
-                    tickfont: { size: tickFontSize, color: '#334155' }, 
-                    tickangle: -90, fixedrange: true
-                },
-                showlegend: false, hovermode: false,
-                plot_bgcolor: 'transparent', paper_bgcolor: 'transparent',
-                margin: { t: 50, b: bottomMargin, l: isMobile ? 10 : 30, r: isMobile ? 10 : 30 },
+                yaxis: { range: [minY - 3, maxY + 3], showticklabels: false, zeroline: false, showgrid: true, gridcolor: gridColor, fixedrange: true },
+                xaxis: { tickvals: xVals, ticktext: xLabels, range: [-0.5, pasos - 0.5], showgrid: true, gridcolor: gridColor, zeroline: false, tickfont: { size: isMobile && cicloCompleto ? 10 : 12, color: tickColor }, tickangle: -90, fixedrange: true },
+                showlegend: false, hovermode: false, plot_bgcolor: 'transparent', paper_bgcolor: 'transparent',
+                margin: { t: 30, b: isMobile ? 120 : 150, l: 10, r: 10 }, 
                 shapes: []
             };
 
-            const config = { responsive: true, displayModeBar: false };
-            Plotly.newPlot('chart', data, layout, config);
+            try {
+                Plotly.react('chart', data, layout, { responsive: true, displayModeBar: false });
+            } catch (e) { console.warn("Plotly React Error:", e); }
         }
 
-        let synth;
-        let isPlaying = false;
-        let loopEvent;
-
-        async function initAudio() {
-            if (!synth) {
-                await Tone.start();
-                synth = new Tone.PolySynth(Tone.Synth, {
-                    oscillator: { type: "sine" },
-                    envelope: { attack: 0.05, decay: 0.2, sustain: 0.8, release: 1.5 }
-                }).toDestination();
-                synth.volume.value = -6; 
-            }
-        }
-
-        function midiToFreq(midiNote) {
-            return Math.pow(2, (midiNote - 69) / 12) * 440;
-        }
-
-        document.getElementById('tempoSlider').addEventListener('input', function(e) {
-            document.getElementById('tempoValue').innerText = e.target.value;
-            Tone.Transport.bpm.value = parseInt(e.target.value);
-        });
-
-        document.getElementById('volumeSlider').addEventListener('input', function(e) {
-            document.getElementById('volumeValue').innerText = e.target.value + ' dB';
+        function cambiarTimbre() { 
             if (synth) {
-                synth.volume.value = parseFloat(e.target.value);
+                try {
+                    synth.set({ oscillator: { type: document.getElementById("opcionTimbre").value } }); 
+                } catch(e) { console.warn("Timbre update failed:", e); }
             }
+        }
+        
+        async function initAudio() {
+            try {
+                if (Tone.context.state !== 'running') {
+                    await Tone.start();
+                }
+                if (!synth) {
+                    synth = new Tone.PolySynth().toDestination();
+                    synth.set({
+                        oscillator: { type: document.getElementById("opcionTimbre").value }, 
+                        envelope: { attack: 0.05, decay: 0.2, sustain: 0.6, release: 2 } 
+                    });
+                    synth.volume.value = parseFloat(document.getElementById('volumeSlider').value); 
+                }
+            } catch (err) {
+                console.error("Audio Context / Synth initialization failed:", err);
+                alert("Hubo un problema inicializando el audio. Intenta interactuar con la página primero.");
+            }
+        }
+
+        document.getElementById('tempoSlider').addEventListener('input', e => { 
+            document.getElementById('tempoValue').innerText = e.target.value; 
+            Tone.Transport.bpm.value = parseInt(e.target.value); 
+        });
+        
+        document.getElementById('volumeSlider').addEventListener('input', e => { 
+            document.getElementById('volumeValue').innerText = e.target.value + ' dB'; 
+            if (synth) synth.volume.value = parseFloat(e.target.value); 
         });
 
         async function togglePlay() {
-            const btn = document.getElementById("btnPlay");
-            if (isPlaying) {
-                stopSequence();
-            } else {
-                // Tone.start() DEBE ir aquí ligado directamente al clic del usuario para evitar bloqueo en móviles (Safari/iOS)
-                await initAudio();
-                startSequence();
+            if (isPlaying) { 
+                stopSequence(); 
+            } else { 
+                await initAudio(); 
+                if (synth) { startSequence(); }
             }
         }
 
         function startSequence() {
-            if (!datosActuales) return;
+            if (!datosActuales || !synth) return;
             isPlaying = true;
+            document.getElementById("btnPlay").classList.add('playing-btn');
+            document.getElementById("btnPlay").innerHTML = `<svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="currentColor"><path d="M6 6h12v12H6z"/></svg><span>Detener Secuencia</span>`;
             
-            const btn = document.getElementById("btnPlay");
-            btn.classList.add('playing-btn');
-            btn.innerHTML = `<svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="currentColor"><path d="M6 6h12v12H6z"/></svg><span>Detener Secuencia</span>`;
-            
+            Tone.Transport.stop();
+            Tone.Transport.cancel(0); 
+            Tone.Transport.position = 0; 
+            if (loopEvent !== null) { Tone.Transport.clear(loopEvent); loopEvent = null; }
+
             Tone.Transport.bpm.value = parseInt(document.getElementById('tempoSlider').value);
             
             let step = 0;
             const totalSteps = datosActuales.pasos;
 
-            Tone.Transport.stop();
-            Tone.Transport.cancel(0);
-            if (loopEvent !== undefined) { Tone.Transport.clear(loopEvent); }
-
             loopEvent = Tone.Transport.scheduleRepeat((time) => {
-                // Guard clause para evitar leer pasos inexistentes (Error NaN)
                 if (step >= totalSteps) {
                     Tone.Transport.clear(loopEvent);
-                    // Detener visual y audio un beat despues del ultimo acorde
-                    Tone.Draw.schedule(() => { stopSequence(); }, time + Tone.Time("4n").toSeconds());
+                    Tone.Draw.schedule(() => stopSequence(), time + Tone.Time("4n").toSeconds());
                     return;
                 }
 
-                let freqs = [];
-                if (voiceVisible[0] && !isNaN(datosActuales.v1[step])) freqs.push(midiToFreq(datosActuales.v1[step]));
-                if (voiceVisible[1] && !isNaN(datosActuales.v2[step])) freqs.push(midiToFreq(datosActuales.v2[step]));
-                if (voiceVisible[2] && !isNaN(datosActuales.v3[step])) freqs.push(midiToFreq(datosActuales.v3[step]));
-                if (voiceVisible[3] && !isNaN(datosActuales.v4[step])) freqs.push(midiToFreq(datosActuales.v4[step]));
+                const currentStepData = step; 
+                let isArpeggio = document.getElementById("checkArpegio").checked;
+                let timeOffset = 0;
+                let arpeggioDelay = 0.08; 
+                const duration = "4n"; 
+                const isDark = document.documentElement.classList.contains('dark');
 
-                if(freqs.length > 0) {
-                    try {
-                        synth.triggerAttackRelease(freqs, "8n", time);
-                    } catch (err) {
-                        console.warn("Acorde silenciado preventivamente", err);
+                const voices = [
+                    { id: 3, val: datosActuales.v4[currentStepData] }, 
+                    { id: 2, val: datosActuales.v3[currentStepData] }, 
+                    { id: 1, val: datosActuales.v2[currentStepData] }, 
+                    { id: 0, val: datosActuales.v1[currentStepData] }  
+                ];
+
+                const toFreq = midi => Math.pow(2, (midi - 69) / 12) * 440;
+
+                voices.forEach(voice => {
+                    if (voiceVisible[voice.id] && voice.val !== undefined && voice.val !== null && !isNaN(voice.val)) {
+                        let freq = toFreq(voice.val);
+                        if (Number.isFinite(freq)) {
+                            let noteTime = isArpeggio ? time + timeOffset : time;
+                            try { 
+                                synth.triggerAttackRelease(freq, duration, noteTime); 
+                            } catch (err) { 
+                                console.warn("Synth Drop on valid freq:", err); 
+                            }
+                            Tone.Draw.schedule(() => {
+                                highlightKey(voice.val, voice.id);
+                                setTimeout(() => clearKey(voice.val, voice.id), Tone.Time(duration).toMilliseconds());
+                            }, noteTime);
+                            if (isArpeggio) timeOffset += arpeggioDelay;
+                        }
                     }
-                }
+                });
 
-                let currentStep = step;
                 Tone.Draw.schedule(() => {
-                    Plotly.relayout('chart', {
-                        shapes: [{
-                            type: 'rect', xref: 'x', yref: 'paper',
-                            x0: currentStep - 0.4, x1: currentStep + 0.4,
-                            y0: 0, y1: 1,
-                            fillcolor: 'rgba(59, 130, 246, 0.12)', 
-                            line: { width: 0 }, layer: 'below'
-                        }]
-                    }).catch(() => {}); 
+                    const highlightColor = isDark ? 'rgba(59, 130, 246, 0.25)' : 'rgba(59, 130, 246, 0.1)';
+                    try {
+                        Plotly.relayout('chart', { shapes: [{ type: 'rect', xref: 'x', yref: 'paper', x0: currentStepData - 0.4, x1: currentStepData + 0.4, y0: 0, y1: 1, fillcolor: highlightColor, line: { width: 0 }, layer: 'below' }] }); 
+                    } catch(e) {}
                 }, time);
-
+                
                 step++;
-            }, "4n"); 
-
+            }, "2n"); 
+            
             Tone.Transport.start();
         }
 
         function stopSequence() {
             isPlaying = false;
-            const btn = document.getElementById("btnPlay");
-            btn.classList.remove('playing-btn');
-            btn.innerHTML = `<svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="currentColor"><path d="M8 5v14l11-7z"/></svg><span>Escuchar Progresión</span>`;
+            document.getElementById("btnPlay").classList.remove('playing-btn');
+            document.getElementById("btnPlay").innerHTML = `<svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="currentColor"><path d="M8 5v14l11-7z"/></svg><span>Escuchar Progresión</span>`;
             
-            Tone.Transport.stop();
+            Tone.Transport.stop(); 
             Tone.Transport.cancel(0); 
             Tone.Transport.position = 0; 
             
-            if (loopEvent !== undefined) {
-                Tone.Transport.clear(loopEvent);
-                loopEvent = undefined;
-            }
-            if (synth) synth.releaseAll(); 
-            
+            if (loopEvent !== null) { Tone.Transport.clear(loopEvent); loopEvent = null; }
+            if (synth) { try { synth.releaseAll(); } catch(e){} }
             try { Plotly.relayout('chart', { shapes: [] }); } catch (e) {}
+            
+            document.querySelectorAll('.key-active-v0, .key-active-v1, .key-active-v2, .key-active-v3').forEach(el => {
+                el.className = el.className.replace(/key-active-v[0-3]/g, '').trim();
+            });
         }
 
-        // Redibujar en resize para adaptar fuentes y márgenes (Debounced)
-        window.addEventListener('resize', () => {
-            clearTimeout(resizeTimeout);
-            resizeTimeout = setTimeout(() => {
-                if(!isPlaying) actualizarSimulador();
-                else Plotly.Plots.resize('chart'); // Solo resize container si está sonando para no trabar audio
-            }, 250);
-        });
+        function exportarGrafico() {
+            Plotly.downloadImage('chart', { format: 'png', width: 1200, height: 800, filename: 'Progresion_Omnibus' });
+        }
 
-        document.addEventListener('DOMContentLoaded', actualizarSimulador);
+        function exportarMIDI() {
+            if (!datosActuales) return;
+            if (!window.MidiWriter || !window.MidiWriter.Track) {
+                alert("El motor MIDI aún se está cargando o hubo un error de red. Intenta en un segundo.");
+                return;
+            }
+            try {
+                const track = new window.MidiWriter.Track();
+                track.setTempo(parseInt(document.getElementById('tempoSlider').value));
+                
+                for (let i = 0; i < datosActuales.pasos; i++) {
+                    let notes = [];
+                    [datosActuales.v1[i], datosActuales.v2[i], datosActuales.v3[i], datosActuales.v4[i]].forEach((midi, index) => {
+                        if (voiceVisible[index] && midi !== undefined && !isNaN(midi)) {
+                            notes.push(midi);
+                        }
+                    });
+                    
+                    if (notes.length > 0) {
+                        let event = new window.MidiWriter.NoteEvent({
+                            pitch: notes,
+                            duration: '2', 
+                        });
+                        track.addEvent(event);
+                    }
+                }
+                
+                const write = new window.MidiWriter.Writer([track]); 
+                const dataUri = write.dataUri();
+                
+                const link = document.createElement('a');
+                link.href = dataUri;
+                link.download = 'Progresion_Omnibus.mid';
+                document.body.appendChild(link);
+                link.click();
+                try { document.body.removeChild(link); } catch(e){}
+            } catch (err) {
+                console.error("Error exporting MIDI:", err);
+                alert("No se pudo generar el archivo MIDI.");
+            }
+        }
+
+        document.addEventListener('DOMContentLoaded', () => {
+            renderPiano();
+            actualizarSimulador();
+        });
     </script>
 </body>
 </html>
