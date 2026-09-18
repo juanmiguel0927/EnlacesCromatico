@@ -171,12 +171,12 @@
                         </div>
 
                         <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-3 mb-5 border-t border-slate-100 dark:border-slate-700 pt-3 transition-colors">
-                            <span class="text-sm font-semibold text-slate-800 dark:text-slate-200">Timbre</span>
+                            <span class="text-sm font-semibold text-slate-800 dark:text-slate-200">Timbre (Suave)</span>
                             <select id="opcionTimbre" onchange="cambiarTimbre()" class="w-full sm:w-auto bg-slate-50 dark:bg-slate-700 dark:text-white border border-slate-300 dark:border-slate-600 hover:border-blue-400 text-slate-700 text-xs rounded focus:ring-blue-500 focus:border-blue-500 block p-1.5 outline-none cursor-pointer transition-colors shadow-sm">
-                                <option value="sine" selected>Ondas Senoidales</option>
-                                <option value="triangle">Triangular (Cálido)</option>
-                                <option value="sawtooth">Diente de Sierra</option>
-                                <option value="square">Cuadrada (Sintetizador)</option>
+                                <option value="rhodes" selected>Piano Eléctrico Suave</option>
+                                <option value="pad">Pad Analógico Cálido</option>
+                                <option value="flute">Viento Madera Dulce</option>
+                                <option value="sine">Vibráfono de Cristal</option>
                             </select>
                         </div>
 
@@ -239,7 +239,8 @@
     <script>
         let voiceVisible = [true, true, true, true];
         let datosActuales = null;
-        let synth = null;
+        let mainSynth = null;
+        let synthType = 'rhodes';
         let isPlaying = false;
         let loopEvent = null;
         
@@ -256,10 +257,8 @@
         // ALGORITMO INTELIGENTE: Formatea números arábicos apilados de mayor a menor
         function formatearCifradoRomano(texto) {
             if (!texto) return "";
-            // Busca cadenas de dígitos separados por barras (ej. 6/4, 4/3, 6/5) ignorando números romanos
             return texto.replace(/(\d+(?:\/\d+)+)/g, (match) => {
                 let numeros = match.split('/').map(Number).sort((a, b) => b - a);
-                // Usamos superíndice y subíndice para que Plotly los dibuje apilados al estilo clásico
                 return `<sup>${numeros[0]}</sup><sub>${numeros[1]}</sub>`; 
             });
         }
@@ -427,7 +426,6 @@
 
                 let esSextaAumentada = sextasAumentadas.includes(i);
                 
-                // Aplicamos el formato avanzado de Cifrado Romano (Ordenación matemática y Sup/Sub)
                 let acordeFinal = modoRomano 
                     ? formatearCifradoRomano(cifradosRomanos[i] || "X") 
                     : transponerCifradoAmericano(cifradosAmericanos[i], offsetTono);
@@ -445,11 +443,9 @@
                 pos4.push('bottom center'); 
             }
             
-            // Guardamos los datos actuales para que el motor Tone.js y exportación MIDI funcionen
             datosActuales = { pasos, v1: v1Y, v2: v2Y, v3: v3Y, v4: v4Y };
 
             const fontSizeData = isMobile ? 9 : 12;
-            const darkTextColor = isDark ? '#cbd5e1' : '#475569';
 
             const data = [
                 { x: xVals, y: v1Y, text: v1N, mode: 'lines+markers+text', textposition: pos1, line: { color: '#ea580c', width: 3 }, marker: { size: 8 }, font: { size: fontSizeData, color: '#ea580c', weight: 'bold' }, hoverinfo: 'none', visible: voiceVisible[0] },
@@ -474,11 +470,68 @@
             } catch (e) { console.warn("Plotly React Error:", e); }
         }
 
-        function cambiarTimbre() { 
-            if (synth) {
-                try {
-                    synth.set({ oscillator: { type: document.getElementById("opcionTimbre").value } }); 
-                } catch(e) { console.warn("Timbre update failed:", e); }
+        // --- SISTEMA DE SINTETIZADORES SUAVES ---
+        
+        function crearSintetizador(tipo) {
+            // Destruye el sintetizador anterior si existe para liberar memoria
+            if (mainSynth) {
+                mainSynth.dispose();
+            }
+
+            let nuevoSynth;
+            const volNode = new Tone.Volume(parseFloat(document.getElementById('volumeSlider').value)).toDestination();
+
+            switch (tipo) {
+                case 'rhodes':
+                    // Un sonido tipo piano eléctrico suave usando FM (Frequency Modulation)
+                    nuevoSynth = new Tone.PolySynth(Tone.FMSynth, {
+                        harmonicity: 1,
+                        modulationIndex: 1.5,
+                        oscillator: { type: "sine" },
+                        envelope: { attack: 0.01, decay: 0.2, sustain: 0.6, release: 2.5 },
+                        modulation: { type: "square" },
+                        modulationEnvelope: { attack: 0.05, decay: 0.2, sustain: 0.1, release: 1 }
+                    }).connect(volNode);
+                    break;
+
+                case 'pad':
+                    // Un pad analógico cálido con filtro paso bajo
+                    const filter = new Tone.Filter(1200, "lowpass").connect(volNode);
+                    nuevoSynth = new Tone.PolySynth(Tone.Synth, {
+                        oscillator: { type: "pwm", modulationFrequency: 0.2 },
+                        envelope: { attack: 0.8, decay: 0.5, sustain: 0.8, release: 3 }
+                    }).connect(filter);
+                    break;
+                
+                case 'flute':
+                    // Un sonido muy suave similar a un instrumento de viento
+                    nuevoSynth = new Tone.PolySynth(Tone.Synth, {
+                        oscillator: { type: "triangle" },
+                        envelope: { attack: 0.1, decay: 0.1, sustain: 0.9, release: 1.5 }
+                    }).connect(volNode);
+                    break;
+
+                case 'sine':
+                default:
+                    // El sonido más puro y suave, similar a un vibráfono o copas de cristal
+                    nuevoSynth = new Tone.PolySynth(Tone.Synth, {
+                        oscillator: { type: "sine" },
+                        envelope: { attack: 0.05, decay: 0.5, sustain: 0.8, release: 3 }
+                    }).connect(volNode);
+                    break;
+            }
+
+            return nuevoSynth;
+        }
+
+        async function cambiarTimbre() { 
+            synthType = document.getElementById("opcionTimbre").value;
+            // Si ya hemos inicializado el contexto de audio, recreamos el sintetizador
+            if (Tone.context.state === 'running') {
+                const wasPlaying = isPlaying;
+                if (wasPlaying) stopSequence();
+                mainSynth = crearSintetizador(synthType);
+                if (wasPlaying) startSequence();
             }
         }
         
@@ -487,13 +540,8 @@
                 if (Tone.context.state !== 'running') {
                     await Tone.start();
                 }
-                if (!synth) {
-                    synth = new Tone.PolySynth().toDestination();
-                    synth.set({
-                        oscillator: { type: document.getElementById("opcionTimbre").value }, 
-                        envelope: { attack: 0.05, decay: 0.2, sustain: 0.6, release: 2 } 
-                    });
-                    synth.volume.value = parseFloat(document.getElementById('volumeSlider').value); 
+                if (!mainSynth) {
+                    mainSynth = crearSintetizador(synthType);
                 }
             } catch (err) {
                 console.error("Audio Context / Synth initialization failed:", err);
@@ -508,7 +556,8 @@
         
         document.getElementById('volumeSlider').addEventListener('input', e => { 
             document.getElementById('volumeValue').innerText = e.target.value + ' dB'; 
-            if (synth) synth.volume.value = parseFloat(e.target.value); 
+            // Buscamos el nodo de volumen conectado al master y lo actualizamos
+            Tone.getDestination().volume.value = parseFloat(e.target.value);
         });
 
         async function togglePlay() {
@@ -516,12 +565,12 @@
                 stopSequence(); 
             } else { 
                 await initAudio(); 
-                if (synth) { startSequence(); }
+                if (mainSynth) { startSequence(); }
             }
         }
 
         function startSequence() {
-            if (!datosActuales || !synth) return;
+            if (!datosActuales || !mainSynth) return;
             isPlaying = true;
             document.getElementById("btnPlay").classList.add('playing-btn');
             document.getElementById("btnPlay").innerHTML = `<svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="currentColor"><path d="M6 6h12v12H6z"/></svg><span>Detener Secuencia</span>`;
@@ -547,7 +596,9 @@
                 let isArpeggio = document.getElementById("checkArpegio").checked;
                 let timeOffset = 0;
                 let arpeggioDelay = 0.08; 
-                const duration = "4n"; 
+                
+                // Duración de la nota. Para pads, queremos que se sostenga más.
+                const duration = synthType === 'pad' ? "2n" : "4n"; 
                 const isDark = document.documentElement.classList.contains('dark');
 
                 const voices = [
@@ -565,13 +616,14 @@
                         if (Number.isFinite(freq)) {
                             let noteTime = isArpeggio ? time + timeOffset : time;
                             try { 
-                                synth.triggerAttackRelease(freq, duration, noteTime); 
+                                // Usamos una nota más suave y una duración que permita solapamiento (legato) si es necesario
+                                mainSynth.triggerAttackRelease(freq, duration, noteTime); 
                             } catch (err) { 
                                 console.warn("Synth Drop on valid freq:", err); 
                             }
                             Tone.Draw.schedule(() => {
                                 highlightKey(voice.val, voice.id);
-                                setTimeout(() => clearKey(voice.val, voice.id), Tone.Time(duration).toMilliseconds());
+                                setTimeout(() => clearKey(voice.val, voice.id), Tone.Time("4n").toMilliseconds());
                             }, noteTime);
                             if (isArpeggio) timeOffset += arpeggioDelay;
                         }
@@ -601,7 +653,7 @@
             Tone.Transport.position = 0; 
             
             if (loopEvent !== null) { Tone.Transport.clear(loopEvent); loopEvent = null; }
-            if (synth) { try { synth.releaseAll(); } catch(e){} }
+            if (mainSynth) { try { mainSynth.releaseAll(); } catch(e){} }
             try { Plotly.relayout('chart', { shapes: [] }); } catch (e) {}
             
             document.querySelectorAll('.key-active-v0, .key-active-v1, .key-active-v2, .key-active-v3').forEach(el => {
