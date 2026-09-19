@@ -37,45 +37,63 @@
 
         #piano-container {
             position: relative;
-            white-space: nowrap;
+            width: 100%;
             height: 80px;
             display: flex;
-            justify-content: center;
-            padding: 8px;
             background: #1e293b;
-            border-radius: 12px;
-            box-shadow: inset 0 4px 6px rgba(0,0,0,0.3);
-            overflow-x: auto;
-        }
-        .white-key {
-            display: inline-block;
-            width: 32px;
-            height: 100%;
-            background-color: white;
-            border: 1px solid #cbd5e1;
-            border-radius: 0 0 4px 4px;
-            margin: 0 1px;
-            position: relative;
-            z-index: 1;
-            box-shadow: 0 2px 2px rgba(0,0,0,0.2);
-            transition: background-color 0.1s;
-        }
-        .black-key {
-            position: absolute;
-            width: 20px;
-            height: 60%;
-            background-color: #0f172a;
-            border-radius: 0 0 3px 3px;
-            z-index: 2;
-            margin-left: -11px;
-            box-shadow: 1px 2px 2px rgba(0,0,0,0.4);
-            transition: background-color 0.1s;
+            padding: 4px;
+            border-radius: 8px;
+            box-sizing: border-box;
+            user-select: none;
+            box-shadow: inset 0 4px 6px rgba(0,0,0,0.5);
+            overflow: hidden;
         }
         
-        .key-active-v0 { background-color: #ea580c !important; } 
-        .key-active-v1 { background-color: #a855f7 !important; } 
-        .key-active-v2 { background-color: #10b981 !important; } 
-        .key-active-v3 { background-color: #3b82f6 !important; } 
+        .white-key {
+            flex: 1;
+            background: white;
+            border: 1px solid #cbd5e1;
+            border-radius: 0 0 4px 4px;
+            position: relative;
+            z-index: 1;
+            cursor: pointer;
+            box-sizing: border-box;
+            transition: background-color 0.1s;
+        }
+        .white-key:active { background: #e2e8f0; transform: translateY(1px); }
+
+        .key-black-wrapper {
+            position: absolute;
+            top: 4px;
+            left: 4px;
+            right: 4px;
+            height: calc(100% - 8px);
+            pointer-events: none;
+            display: flex;
+            z-index: 2;
+        }
+
+        .key-spacer { flex: 1; position: relative; }
+
+        .black-key {
+            position: absolute;
+            background: #0f172a;
+            width: 60%;
+            height: 60%;
+            left: 70%;
+            border-radius: 0 0 3px 3px;
+            cursor: pointer;
+            pointer-events: auto;
+            box-shadow: inset 0 -2px 2px rgba(255,255,255,0.2), 2px 2px 3px rgba(0,0,0,0.4);
+            transition: background-color 0.1s, box-shadow 0.1s;
+        }
+        .black-key:active { background: #1e293b; transform: translateY(1px); box-shadow: inset 0 -1px 1px rgba(255,255,255,0.1); }
+        
+        /* Efecto Glow LED al iluminarse */
+        .key-active-v0 { background-color: #ea580c !important; box-shadow: 0 0 15px #ea580c, inset 0 -2px 5px rgba(255,255,255,0.5) !important; z-index: 10 !important; } 
+        .key-active-v1 { background-color: #a855f7 !important; box-shadow: 0 0 15px #a855f7, inset 0 -2px 5px rgba(255,255,255,0.5) !important; z-index: 10 !important; } 
+        .key-active-v2 { background-color: #10b981 !important; box-shadow: 0 0 15px #10b981, inset 0 -2px 5px rgba(255,255,255,0.5) !important; z-index: 10 !important; } 
+        .key-active-v3 { background-color: #3b82f6 !important; box-shadow: 0 0 15px #3b82f6, inset 0 -2px 5px rgba(255,255,255,0.5) !important; z-index: 10 !important; } 
     </style>
 </head>
 <body class="bg-transparent dark:bg-transparent h-full p-2 sm:p-4 flex flex-col items-center overflow-x-hidden transition-colors duration-300">
@@ -97,6 +115,7 @@
                     <select id="opcionVoicing" onchange="actualizarSimulador()" class="w-full mb-3 bg-slate-50 dark:bg-slate-700 dark:text-white border border-slate-300 dark:border-slate-600 text-slate-800 text-xs rounded-lg block p-2 outline-none cursor-pointer shadow-sm">
                         <option value="op1">Prolongación de Dominante</option>
                         <option value="op2">Intercambio de Tritono</option>
+                        <option value="op2_cruce">Intercambio de Tritono (Cruce de Voces)</option>
                         <option value="op3">Aproximación Ómnibus</option>
                     </select>
 
@@ -259,6 +278,7 @@
         const baseTeorica = {
             op1: "<b>Prolongación de Dominante:</b> Muestra el cromatismo clásico por movimiento contrario. El intercambio entre la fundamental y la tercera prolonga un acorde de séptima de dominante en estado fundamental. Las armonías intermedias funcionan como acordes de sexta aumentada alemana implícitos, dispuestas simétricamente en torno a los pedales centrales.",
             op2: "<b>Intercambio de Tritono:</b> El intercambio abarca un tritono armónico, prolongando el acorde de séptima de dominante enlazando sus inversiones. Este modelo mantiene fijos la fundamental y la quinta en las otras voces, mientras que la tercera y la séptima intercambian sus posiciones cromáticamente para crear inestabilidad direccional pura.",
+            op2_cruce: "<b>Intercambio de Tritono (Cruce de Voces):</b> Variante del intercambio de tritono donde, al alcanzar el unísono armónico, el Tenor y el Bajo intercambian sus funciones. El Tenor asume el pedal estructural mientras que el Bajo se hace cargo de la línea cromática descendente, evitando el cruce de voces tradicional y creando una nueva textura en el registro grave.",
             op3: "<b>Aproximación Ómnibus:</b> El patrón simétrico en espejo definitivo. Alterna sistemáticamente acordes de séptima dominante en fundamental con acordes de sexta aumentada alemana. Trata a los tritonos no como intervalos que requieren resolución, sino como entidades que giran en torno a voces internas (pedales)."
         };
 
@@ -288,29 +308,77 @@
             actualizarSimulador(); 
         }
 
-        const minMidi = 43; 
-        const maxMidi = 86; 
+        async function playKey(midiVal) {
+            if (Tone.context.state !== 'running') {
+                await Tone.start();
+            }
+            if (!mainSynth) {
+                mainSynth = crearSintetizador(synthType);
+            }
+            let freq = Math.pow(2, (midiVal - 69) / 12) * 440;
+            mainSynth.triggerAttackRelease(freq, "8n");
+            
+            let key = document.getElementById(`key-${midiVal}`);
+            if (key) {
+                key.classList.add('key-active-v0'); // Ilumina en naranja temporalmente
+                setTimeout(() => key.classList.remove('key-active-v0'), 200);
+            }
+        }
         
         function renderPiano() {
             const container = document.getElementById('piano-container');
             container.innerHTML = '';
-            let whiteKeyCount = 0;
-            for (let i = minMidi; i <= maxMidi; i++) {
-                const noteClass = i % 12;
-                const isWhite = [0, 2, 4, 5, 7, 9, 11].includes(noteClass);
-                const keyDiv = document.createElement('div');
-                keyDiv.id = `key-${i}`;
-                if (isWhite) {
-                    keyDiv.className = 'white-key';
-                    container.appendChild(keyDiv);
-                    whiteKeyCount++;
-                } else {
-                    keyDiv.className = 'black-key';
-                    const leftPos = (whiteKeyCount * 34) - 17;
-                    keyDiv.style.left = `${leftPos}px`;
-                    container.appendChild(keyDiv);
-                }
+            
+            // 5 Octavas (C2 a B6) para abarcar todo el ciclo 13 transponiendo
+            const whiteKeysCount = 35; 
+            const startMidi = 36; // C2
+            const isBlackPattern = [false, true, false, true, false, false, true, false, true, false, true, false];
+
+            let currentMidi = startMidi;
+            
+            // Capa de Teclas Blancas
+            for(let i=0; i<whiteKeysCount; i++) {
+                let wk = document.createElement('div');
+                wk.className = 'white-key';
+                wk.id = `key-${currentMidi}`;
+                
+                let midiVal = currentMidi;
+                wk.onmousedown = () => playKey(midiVal);
+                wk.ontouchstart = (e) => { e.preventDefault(); playKey(midiVal); };
+                
+                container.appendChild(wk);
+                
+                currentMidi++;
+                if(isBlackPattern[currentMidi % 12]) currentMidi++; 
             }
+
+            // Capa de Teclas Negras relativas (para alineación perfecta)
+            let blackWrapper = document.createElement('div');
+            blackWrapper.className = 'key-black-wrapper';
+            
+            currentMidi = startMidi;
+            for(let i=0; i<whiteKeysCount; i++) {
+                let spacer = document.createElement('div');
+                spacer.className = 'key-spacer';
+                
+                let noteInOctave = currentMidi % 12;
+                if(noteInOctave === 0 || noteInOctave === 2 || noteInOctave === 5 || noteInOctave === 7 || noteInOctave === 9) {
+                    let bk = document.createElement('div');
+                    bk.className = 'black-key';
+                    bk.id = `key-${currentMidi + 1}`;
+                    
+                    let midiVal = currentMidi + 1;
+                    bk.onmousedown = () => playKey(midiVal);
+                    bk.ontouchstart = (e) => { e.preventDefault(); playKey(midiVal); };
+                    
+                    spacer.appendChild(bk);
+                }
+                
+                blackWrapper.appendChild(spacer);
+                currentMidi++;
+                if(isBlackPattern[currentMidi % 12]) currentMidi++;
+            }
+            container.appendChild(blackWrapper);
         }
         
         function highlightKey(midiVal, voiceIndex) {
@@ -379,7 +447,7 @@
                 cifradosRomanos = ["V7", "V7(b9)", "Ger+6", "I6/4", "V7/IV", "Ger+6/IV", "IV6/4", "V7/bVI", "Ger+6/bVI", "bVI6/4", "V7/vi", "Ger+6/vi", "V7"];
                 cifradosAmericanos = ["G7", "Bm/F#", "G7/F", "E7", "G#m/D#", "E7/D", "C#7", "Fm/C", "C#7/B", "Bb7", "Dm/A", "Bb7/Ab", "G7"];
                 sextasAumentadas = [2, 5, 8, 11]; 
-            } else if (seleccion === "op2") {
+            } else if (seleccion === "op2" || seleccion === "op2_cruce") {
                 baseV1 = 65; dirV1 = 1;  
                 baseV2 = 62; dirV2 = 0;  
                 baseV3 = 59; dirV3 = -1; 
@@ -404,6 +472,14 @@
                 let y2 = baseV2 + (i * dirV2) + offsetTono;
                 let y3 = baseV3 + (i * dirV3) + offsetTono;
                 let y4 = baseV4 + (i * dirV4) + offsetTono;
+
+                // MAGIA MATEMÁTICA: Si es modo cruce, forzamos el intercambio al pasar el unísono
+                if (seleccion === "op2_cruce") {
+                    let tenorOriginal = y3;
+                    let bajoOriginal = y4;
+                    y3 = Math.max(tenorOriginal, bajoOriginal); // El tenor se queda con la nota más alta (pedal)
+                    y4 = Math.min(tenorOriginal, bajoOriginal); // El bajo toma la nota más grave (caída)
+                }
 
                 v1Y.push(y1); v2Y.push(y2); v3Y.push(y3); v4Y.push(y4);
                 v1N.push(getSmartNoteName(y1, dirV1)); 
